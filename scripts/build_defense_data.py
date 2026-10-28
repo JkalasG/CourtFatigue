@@ -1,23 +1,22 @@
 """
-Datos de defensa para el simulador 3D (web/data/defense.json y web/data/contest.json).
+Defense data for the 3D simulator (web/data/defense.json, contest.json, distance.json).
 
-1) Efecto defensivo de cada equipo (nuestras temporadas 2021-25):
-   acierto del rival menos lo esperado por la dificultad del tiro y por el propio tirador
-   (`dev`), promediado por equipo-temporada y suavizado hacia el promedio de la liga.
-   Se publica la temporada más reciente. Es un efecto PROMEDIO del equipo, no de un defensor.
+1) Team defensive effect (our 2021-25 seasons): opponent accuracy minus what shot difficulty
+   and the shooter themselves predict (`dev`), averaged per team-season and shrunk toward the
+   league mean. The latest season is published. It is a team AVERAGE, not a single defender.
 
-2) Distancia al defensor (registro de tiros 2014-15, CC0, 128 mil tiros; data/raw/external/):
-   modelo de gradient boosting monótono (más distancia al defensor => no menos acierto) y una
-   tabla P(anota | distancia del tiro, distancia del defensor) con banda de confianza por
-   bootstrap sobre partidos. El simulador usa la DIFERENCIA respecto a la distancia TÍPICA del defensor
-   para ese tipo de tiro (mediana por distancia de tiro), para que sea un ajuste y no una
-   probabilidad absoluta, y para no contar dos veces lo que la curva por distancia ya incluye.
+2) Defender distance (2014-15 shot log, CC0, 128k shots; data/raw/external/): a monotone
+   gradient-boosting model (more defender distance => never less accuracy) and a table
+   P(make | shot distance, defender distance) with a game-bootstrap confidence band. The
+   simulator uses the DIFFERENCE from the TYPICAL defender distance for that shot type
+   (median per shot distance), so it is an adjustment rather than an absolute probability and
+   does not double count what the shot-distance curve already includes.
 
-Uso: python scripts/build_defense_data.py                 (todo, ~10 min por el remuestreo)
-     python scripts/build_defense_data.py contest         (solo la tabla de distancia al defensor)
-     python scripts/build_defense_data.py team            (solo el efecto defensivo por equipo)
-     python scripts/build_defense_data.py distance        (solo la curva por distancia del tiro)
-     python scripts/build_defense_data.py gap             (solo la comparación con/sin datos del defensor)
+Usage: python scripts/build_defense_data.py             (everything, ~10 min because of the bootstrap)
+       python scripts/build_defense_data.py contest     (defender-distance table only)
+       python scripts/build_defense_data.py team        (team defensive effect only)
+       python scripts/build_defense_data.py distance    (shot-distance curve only)
+       python scripts/build_defense_data.py gap         (accuracy with/without defender data only)
 """
 import json
 import math
@@ -32,8 +31,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src import fatigue_stats as fs  # noqa: E402
 
 OUT = "web/data"
-SHOT_GRID = list(range(0, 41, 2))           # distancia del tiro, pies
-DEF_GRID = [round(x * 0.5, 1) for x in range(0, 25)]   # distancia del defensor, 0 a 12 pies
+SHOT_GRID = list(range(0, 41, 2))           # shot distance, feet
+DEF_GRID = [round(x * 0.5, 1) for x in range(0, 25)]   # defender distance, 0 to 12 feet
 N_BOOT = 24
 
 
@@ -48,7 +47,7 @@ def team_defense():
     d = d.merge(opp, on=["GAME_ID", "TEAM_ID"], how="left").dropna(subset=["OPP_ID"])
     g = d.groupby(["SEASON", "OPP_ID"]).dev.agg(mean="mean", n="size", sd="std").reset_index()
     g["se2"] = (g.sd ** 2) / g.n
-    # varianza real entre equipos (método de momentos) por temporada y suavizado (empirical Bayes)
+    # true between-team variance (method of moments) per season, and empirical-Bayes shrinkage
     last = sorted(g.SEASON.unique())[-1]
     rows, per_season = [], []
     for sea, h in g.groupby("SEASON"):
@@ -60,7 +59,7 @@ def team_defense():
         for r in h.itertuples():
             B = tau2 / (tau2 + r.se2)
             eff = mu + B * (r.mean - mu)
-            sd = math.sqrt(B * r.se2)          # incertidumbre a posteriori
+            sd = math.sqrt(B * r.se2)          # posterior uncertainty
             rows.append({"team_id": int(r.OPP_ID), "team": names.get(int(r.OPP_ID), str(int(r.OPP_ID))),
                          "effect_pp": eff * 100, "lo_pp": (eff - fs.Z95 * sd) * 100, "hi_pp": (eff + fs.Z95 * sd) * 100,
                          "raw_pp": r.mean * 100, "n": int(r.n), "shrink": B})
@@ -80,9 +79,9 @@ def contest_table():
     rng = np.random.default_rng(0)
     grid = pd.DataFrame([(s, 1 if s >= 23 else 0, k) for s in SHOT_GRID for k in DEF_GRID], columns=feats)
 
-    # Referencia: distancia TÍPICA del defensor para cada distancia de tiro (mediana en una ventana de ±1.5 ft).
-    # La curva de acierto por distancia del tiro ya incluye cuánto suele estar marcado ese tipo de tiro; el ajuste del
-    # defensor debe medirse contra ese nivel típico, no contra una distancia fija (que sumaría de más a los triples).
+    # Reference: TYPICAL defender distance for each shot distance (median in a +/-1.5 ft window).
+    # The accuracy-by-shot-distance curve already includes how closely that shot type is usually
+    # guarded, so the defender adjustment is measured against that typical level, not a fixed distance.
     ref_def = []
     for sd in SHOT_GRID:
         near = d.CLOSE_DEF_DIST[(d.SHOT_DIST - sd).abs() <= 1.5]
@@ -93,7 +92,7 @@ def contest_table():
 
     def fit_predict(data):
         m = HistGradientBoostingClassifier(max_iter=120, learning_rate=0.08, max_depth=4, random_state=0,
-                                           monotonic_cst=[0, 0, 1])   # más distancia al defensor => no baja el acierto
+                                           monotonic_cst=[0, 0, 1])   # more defender distance => accuracy never drops
         m.fit(data[feats], data.FGM)
         p = m.predict_proba(grid)[:, 1].reshape(len(SHOT_GRID), len(DEF_GRID))
         p0 = m.predict_proba(ref)[:, 1][:, None]
@@ -103,12 +102,12 @@ def contest_table():
     boots = []
     for b in range(N_BOOT):
         pick = rng.choice(games, size=len(games), replace=True)
-        sample = d.merge(pd.DataFrame({"GAME_ID": pick}), on="GAME_ID")   # remuestreo de partidos con reposición
+        sample = d.merge(pd.DataFrame({"GAME_ID": pick}), on="GAME_ID")   # resample games with replacement
         boots.append(fit_predict(sample)[1])
         print(f"   bootstrap {b + 1}/{N_BOOT}")
     B = np.stack(boots)
     lo, hi = np.percentile(B, 2.5, axis=0), np.percentile(B, 97.5, axis=0)
-    return {"source": "NBA 2014-15, registro de tiros (CC0), %d tiros" % len(d), "ref_def_by_shot_ft": [round(r, 2) for r in ref_def],
+    return {"source": "NBA 2014-15 shot log (CC0), %d shots" % len(d), "ref_def_by_shot_ft": [round(r, 2) for r in ref_def],
             "shot_grid_ft": SHOT_GRID, "def_grid_ft": DEF_GRID,
             "p": np.round(p_hat * 100, 2).tolist(), "adj_pp": np.round(adj_hat * 100, 2).tolist(),
             "adj_lo_pp": np.round(lo * 100, 2).tolist(), "adj_hi_pp": np.round(hi * 100, 2).tolist(),
@@ -116,21 +115,21 @@ def contest_table():
 
 
 def distance_curve():
-    """Acierto por distancia del tiro (nuestras 4 temporadas), relativo al promedio de la liga.
-    Reemplaza la penalización escrita a mano del simulador."""
+    """Accuracy by shot distance (our 4 seasons), relative to the league average.
+    Replaces the simulator's hand-written penalty."""
     d = pd.read_csv("data/processed/shots_fatigue_processed.csv", usecols=["SHOT_DISTANCE", "SHOT_MADE_FLAG"])
     d = d[(d.SHOT_DISTANCE >= 0) & (d.SHOT_DISTANCE <= 40)]
     league = d.SHOT_MADE_FLAG.mean()
     by = d.groupby("SHOT_DISTANCE").SHOT_MADE_FLAG.agg(["mean", "size"])
     by = by.reindex(range(0, 41))
     raw = (by["mean"] - league) * 100
-    smooth = raw.rolling(3, center=True, min_periods=1).mean()          # suaviza el ruido de pies con pocos tiros
+    smooth = raw.rolling(3, center=True, min_periods=1).mean()          # smooth the noise of feet with few shots
     return {"league_fg_pct": float(league * 100), "adj_pp": [round(float(x), 2) for x in smooth.ffill().bfill()],
-            "n": [int(x) if x == x else 0 for x in by["size"]], "source": "NBA 2021-22 a 2024-25 (nuestros datos)"}
+            "n": [int(x) if x == x else 0 for x in by["size"]], "source": "NBA 2021-22 to 2024-25 (our data)"}
 
 
 def defender_gap():
-    """¿Cuánto mejora un modelo de tiro esperado al conocer la distancia al defensor? (2014-15, validación por partido)"""
+    """How much does an expected-shot model improve when the defender distance is known? (2014-15, game-grouped validation)"""
     from sklearn.metrics import log_loss, roc_auc_score
     from sklearn.model_selection import GroupKFold
     d = pd.read_csv("data/raw/external/shot_logs_2014/shot_logs_2014.csv")
@@ -138,9 +137,9 @@ def defender_gap():
     d["IS3"] = (d.PTS_TYPE == 3).astype(int)
     y, g = d.FGM.values, d.GAME_ID.values
     base = ["SHOT_DIST", "IS3", "PERIOD"]
-    sets = [("Sin datos del defensor (como nuestro modelo)", base),
-            ("Con la distancia al defensor", base + ["CLOSE_DEF_DIST"]),
-            ("Con defensor, reloj de posesión, toques y regates", base + ["CLOSE_DEF_DIST", "SHOT_CLOCK", "TOUCH_TIME", "DRIBBLES"])]
+    sets = [("Without defender data (like our model)", base),
+            ("With defender distance", base + ["CLOSE_DEF_DIST"]),
+            ("With defender, shot clock, touch time and dribbles", base + ["CLOSE_DEF_DIST", "SHOT_CLOCK", "TOUCH_TIME", "DRIBBLES"])]
     rows = []
     for name, cols in sets:
         p = np.zeros(len(d))
@@ -157,25 +156,25 @@ def main():
     run_all = not args
     cpath = os.path.join(OUT, "contest.json")
     if run_all or "team" in args:
-        print("🛡️  Efecto defensivo por equipo...")
+        print("Team defensive effect...")
         td = team_defense()
-        print("   temporada", td["season"], "| estabilidad entre temporadas r =", [round(x, 2) for x in td["stability_r"]])
+        print("   season", td["season"], "| between-season stability r =", [round(x, 2) for x in td["stability_r"]])
         json.dump(td, open(os.path.join(OUT, "defense.json"), "w", encoding="utf-8"), ensure_ascii=False)
     if run_all or "contest" in args:
-        print("📏 Tabla de distancia al defensor (2014-15) con bootstrap...")
+        print("Defender-distance table (2014-15) with bootstrap...")
         old_gap = json.load(open(cpath, encoding="utf-8")).get("gap") if os.path.exists(cpath) else None
         ct = contest_table()
         if old_gap:
-            ct["gap"] = old_gap                    # se conserva la brecha de precisión ya calculada
+            ct["gap"] = old_gap                    # keep the accuracy gap already computed
         json.dump(ct, open(cpath, "w", encoding="utf-8"))
     if run_all or "gap" in args:
         ct = json.load(open(cpath, encoding="utf-8"))
         ct["gap"] = defender_gap()
         json.dump(ct, open(cpath, "w", encoding="utf-8"))
-        print("   brecha de precisión:", [(r["model"][:22], round(r["auc"], 3)) for r in ct["gap"]["rows"]])
+        print("   accuracy gap:", [(r["model"][:22], round(r["auc"], 3)) for r in ct["gap"]["rows"]])
     if run_all or "distance" in args:
         json.dump(distance_curve(), open(os.path.join(OUT, "distance.json"), "w", encoding="utf-8"))
-    print("✅ datos de defensa listos en", OUT)
+    print("Defense data ready in", OUT)
 
 
 if __name__ == "__main__":

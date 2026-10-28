@@ -1,23 +1,20 @@
 """
-CourtFatigue - Estadística del efecto de fatiga (inferencia, no solo descripción)
+CourtFatigue - fatigue statistics (inference, not just description).
 
-Estimando principal ("contraste largo vs corto"), por jugador:
-    C_i = residuo medio del jugador con stint >= LONG  -  residuo medio con SHORT_LO <= stint < SHORT
-(la referencia empieza en 2 min para excluir el arranque frío, que no es fatiga)
-donde residuo = SHOT_MADE_FLAG - xShot. Al restar dentro del mismo jugador, su nivel
-base (efecto fijo) se cancela. C_i < 0 significa que rinde peor tras muchos minutos seguidos.
+Main estimand, per player ("long vs. short contrast"):
+    C_i = mean residual with stint >= LONG  -  mean residual with SHORT_LO <= stint < SHORT
+where residual = SHOT_MADE_FLAG - xShot. Subtracting within the same player cancels their
+baseline (fixed effect). C_i < 0 means the player shoots worse after many minutes in a row.
+The reference starts at 2 min to exclude the cold start, which is not fatigue.
 
-Qué ofrece este módulo:
-  * contraste_por_jugador: C_i con error estándar e IC95.
-  * heterogeneidad: promedio poblacional mu y varianza entre jugadores tau^2
-    (DerSimonian-Laird). Si tau^2 ~ 0, los jugadores no se distinguen entre sí.
-  * recomendación por jugador: solo si el IC excluye 0 tras corregir por
-    comparaciones múltiples (Benjamini-Hochberg). Si no, no se recomienda nada.
-  * pendiente poblacional (regresión con efectos fijos, errores robustos por jugador).
-  * prueba placebo: repite el procedimiento con los minutos barajados dentro de cada
-    jugador, donde la fatiga no puede existir, para medir la tasa de falsos positivos.
-  * proyección para un jugador nuevo: distribución previa N(mu, tau^2) actualizada con
-    sus propios tiros (si los hay).
+Contents:
+  * contrast_by_player: C_i with standard error and 95% CI.
+  * heterogeneity: population mean mu and between-player variance tau^2 (DerSimonian-Laird).
+  * flag_players: a recommendation only if the CI excludes 0 after Benjamini-Hochberg correction.
+  * fe_slope: population slope (fixed-effects regression, player-clustered robust errors).
+  * placebo_flag_rate: repeats the procedure with minutes shuffled within each player
+    (where fatigue cannot exist) to measure the false-positive rate.
+  * project_new_player: prior N(mu, tau^2) updated with the player's own shots, if any.
 """
 
 import math
@@ -25,19 +22,19 @@ import numpy as np
 import pandas as pd
 
 Z95 = 1.959964
-SHORT_LO_DEFAULT = 2.0   # referencia "ya calentado": entre 2 y 6 min (excluye el arranque frío)
+SHORT_LO_DEFAULT = 2.0   # "warmed up" reference starts at 2 min (excludes the cold start)
 SHORT_DEFAULT = 6.0
 LONG_DEFAULT = 8.0
-MIN_SHOTS_GROUP = 15  # tiros mínimos en cada grupo (corto y largo) para estimar C_i
+MIN_SHOTS_GROUP = 15     # minimum shots in each group (short and long) to estimate C_i
 
 
 def fe_keys(df: pd.DataFrame) -> list:
-    """Con varias temporadas, cada jugador se compara con su propio nivel EN ESA temporada."""
+    """With several seasons, each player is compared with their own level IN THAT season."""
     return ["PLAYER_ID", "SEASON"] if "SEASON" in df.columns else ["PLAYER_ID"]
 
 
 def add_dev(df: pd.DataFrame) -> pd.DataFrame:
-    """Añade `dev` = residuo menos el promedio del jugador (y temporada)."""
+    """Add `dev` = residual minus the player(-season) mean."""
     df = df.copy()
     df["dev"] = df.shot_residual - df.groupby(fe_keys(df)).shot_residual.transform("mean")
     return df
@@ -48,7 +45,7 @@ def _norm_cdf(z):
 
 
 def benjamini_hochberg(pvals: np.ndarray) -> np.ndarray:
-    """Valores q (FDR) de Benjamini-Hochberg."""
+    """Benjamini-Hochberg q-values (FDR)."""
     p = np.asarray(pvals, dtype=float)
     n = len(p)
     order = np.argsort(p)
@@ -62,7 +59,7 @@ def benjamini_hochberg(pvals: np.ndarray) -> np.ndarray:
 def contrast_by_player(df: pd.DataFrame, short: float = SHORT_DEFAULT, long: float = LONG_DEFAULT,
                        stint_col: str = "stint_minutes", min_shots: int = MIN_SHOTS_GROUP,
                        short_lo: float = SHORT_LO_DEFAULT) -> pd.DataFrame:
-    """C_i, su error estándar e IC95 para cada jugador con muestra suficiente en ambos grupos."""
+    """C_i, standard error and 95% CI for each player with enough shots in both groups."""
     d = add_dev(df)[["PLAYER_ID", stint_col, "dev"]]
     s = d[(d[stint_col] >= short_lo) & (d[stint_col] < short)].groupby("PLAYER_ID").dev.agg(n_s="size", m_s="mean", v_s="var")
     l = d[d[stint_col] >= long].groupby("PLAYER_ID").dev.agg(n_l="size", m_l="mean", v_l="var")
@@ -78,7 +75,7 @@ def contrast_by_player(df: pd.DataFrame, short: float = SHORT_DEFAULT, long: flo
 
 
 def heterogeneity(effects: pd.Series, se: pd.Series) -> dict:
-    """Media poblacional y varianza entre jugadores (DerSimonian-Laird)."""
+    """Population mean and between-player variance (DerSimonian-Laird)."""
     y = effects.values.astype(float)
     w = 1.0 / se.values.astype(float) ** 2
     mu_fe = np.sum(w * y) / np.sum(w)
@@ -96,7 +93,7 @@ def heterogeneity(effects: pd.Series, se: pd.Series) -> dict:
 
 
 def _chi2_cdf(x, k):
-    """CDF chi-cuadrado vía aproximación de Wilson-Hilferty (suficiente para k grande)."""
+    """Chi-square CDF via the Wilson-Hilferty approximation (fine for large k)."""
     if k <= 0:
         return 0.0
     z = ((x / k) ** (1 / 3) - (1 - 2 / (9 * k))) / math.sqrt(2 / (9 * k))
@@ -104,7 +101,7 @@ def _chi2_cdf(x, k):
 
 
 def flag_players(t: pd.DataFrame, mu: float, tau2: float, alpha: float = 0.05) -> pd.DataFrame:
-    """Marca recomendaciones (solo si hay evidencia tras FDR) y añade la estimación encogida."""
+    """Flag players only with evidence after FDR; add the shrunken estimate."""
     t = t.copy()
     t["flag"] = (t.q < alpha) & (t.hi < 0)
     shrink = tau2 / (tau2 + t.se ** 2)
@@ -114,8 +111,8 @@ def flag_players(t: pd.DataFrame, mu: float, tau2: float, alpha: float = 0.05) -
 
 def fe_slope(df: pd.DataFrame, xcols, stint_col: str = "stint_minutes") -> pd.DataFrame:
     """
-    Regresión del residuo sobre variables (p. ej. minutos seguidos) con efectos fijos de
-    jugador y errores robustos agrupados por jugador. Coeficientes en puntos porcentuales.
+    Regress the residual on covariates (e.g. consecutive minutes) with player fixed effects
+    and player-clustered robust errors. Coefficients in percentage points.
     """
     cols = list(xcols)
     keys = fe_keys(df)
@@ -137,14 +134,14 @@ def fe_slope(df: pd.DataFrame, xcols, stint_col: str = "stint_minutes") -> pd.Da
 
 
 def bucket_effects(df: pd.DataFrame, edges, stint_col: str = "stint_minutes") -> pd.DataFrame:
-    """Residuo medio por tramo, relativo a la media de cada jugador (efectos fijos), IC95 por jugador."""
+    """Mean residual per bucket relative to each player's mean (fixed effects), player-clustered 95% CI."""
     d = add_dev(df)[["PLAYER_ID", stint_col, "dev"]].copy()
     d["bucket"] = pd.cut(d[stint_col], edges, right=False)
     rows = []
     for b, sub in d.groupby("bucket", observed=True):
         n = len(sub)
         per_player = sub.groupby("PLAYER_ID").dev.sum()
-        se = math.sqrt((per_player ** 2).sum()) / n  # error estándar agrupado por jugador
+        se = math.sqrt((per_player ** 2).sum()) / n  # player-clustered standard error
         m = sub.dev.mean()
         rows.append({"lo_edge": b.left, "hi_edge": b.right, "n": n, "effect_pp": m * 100,
                      "lo_pp": (m - Z95 * se) * 100, "hi_pp": (m + Z95 * se) * 100})
@@ -152,7 +149,7 @@ def bucket_effects(df: pd.DataFrame, edges, stint_col: str = "stint_minutes") ->
 
 
 def zone_slopes(df: pd.DataFrame, zones, stint_col: str = "stint_minutes") -> pd.DataFrame:
-    """Pendiente por zona (pp por minuto seguido) con efectos fijos y q de Benjamini-Hochberg."""
+    """Slope per zone (pp per consecutive minute) with fixed effects and Benjamini-Hochberg q."""
     rows = []
     for z in zones:
         sub = df[df.SHOT_ZONE_BASIC == z]
@@ -171,9 +168,9 @@ def placebo_flag_rate(df: pd.DataFrame, short: float, long: float, n_perm: int =
                       short_lo: float = SHORT_LO_DEFAULT,
                       naive_drop_pp: float = 3.0, min_naive: int = 20, min_player_shots: int = 200) -> dict:
     """
-    Tasa de jugadores 'marcados' con datos reales y con minutos barajados dentro de cada jugador.
-    Compara la regla ingenua original (caída >= 3 pp en algún tramo con >= 20 tiros) con la
-    regla basada en inferencia (IC95 < 0 y q < 0.05).
+    Share of players flagged with real data and with minutes shuffled within each player.
+    Compares the naive rule (drop >= 3 pp in any bucket with >= 20 shots) with the
+    inference-based rule (95% CI < 0 and q < 0.05).
     """
     rng = np.random.default_rng(seed)
     big = df.groupby("PLAYER_ID").size()
@@ -210,7 +207,7 @@ def placebo_flag_rate(df: pd.DataFrame, short: float, long: float, n_perm: int =
 
 
 def _cluster_mean(sub: pd.DataFrame, n_total_label: str = "dev") -> dict:
-    """Media de la desviación (relativa al promedio del jugador) con IC95% agrupado por jugador."""
+    """Mean deviation (relative to the player's average) with player-clustered 95% CI."""
     n = len(sub)
     if n < 30:
         return {"n": n, "effect_pp": None, "lo_pp": None, "hi_pp": None}
@@ -221,9 +218,9 @@ def _cluster_mean(sub: pd.DataFrame, n_total_label: str = "dev") -> dict:
 
 def cold_start_table(df: pd.DataFrame, stint_col: str = "stint_minutes") -> list:
     """
-    Rendimiento justo después de entrar a cancha (relativo al promedio de cada jugador).
-    Devuelve filas {group, label, n, effect_pp, lo_pp, hi_pp}: por tramo de tiempo, por cuarto
-    y según sea la primera entrada del jugador al partido o una re-entrada.
+    Performance right after entering the court (relative to each player's average).
+    Rows {group, label, n, effect_pp, lo_pp, hi_pp}: by time bucket, by quarter, and
+    first appearance vs. re-entry.
     """
     d = add_dev(df)
     rows = []
@@ -231,25 +228,25 @@ def cold_start_table(df: pd.DataFrame, stint_col: str = "stint_minutes") -> list
     def add(group, label, sub):
         rows.append({"group": group, "label": label, **_cluster_mean(sub)})
 
-    for lo, hi, lab in ((0, 0.5, "0–30 s"), (0.5, 1, "30–60 s"), (1, 2, "1–2 min"), (2, 4, "2–4 min (referencia)")):
-        add("Tiempo desde que entra", lab, d[(d[stint_col] >= lo) & (d[stint_col] < hi)])
+    for lo, hi, lab in ((0, 0.5, "0–30 s"), (0.5, 1, "30–60 s"), (1, 2, "1–2 min"), (2, 4, "2–4 min (reference)")):
+        add("Time since entering", lab, d[(d[stint_col] >= lo) & (d[stint_col] < hi)])
     first_min = d[d[stint_col] < 1]
     re_entry = (first_min.game_minutes_played - first_min[stint_col]) > 0.5
-    add("Primer minuto: ¿primera entrada?", "Primera vez en el partido", first_min[~re_entry])
-    add("Primer minuto: ¿primera entrada?", "Re-entrada (ya jugó antes)", first_min[re_entry])
+    add("First minute: first appearance?", "First time in the game", first_min[~re_entry])
+    add("First minute: first appearance?", "Re-entry (played before)", first_min[re_entry])
     for q in (1, 2, 3, 4):
-        add("Primer minuto, por cuarto", f"Cuarto {q}", first_min[first_min.PERIOD == q])
+        add("First minute, by quarter", f"Quarter {q}", first_min[first_min.PERIOD == q])
     return rows
 
 
 def season_replication(df: pd.DataFrame, short: float = SHORT_DEFAULT, long: float = LONG_DEFAULT,
                        short_lo: float = SHORT_LO_DEFAULT) -> list:
-    """El mismo análisis, temporada por temporada: ¿se repite el resultado?"""
+    """Same analysis, season by season: does the result repeat?"""
     rows = []
     for season, d in df.groupby("SEASON"):
         t = contrast_by_player(d, short, long, short_lo=short_lo)
         het = heterogeneity(t.effect, t.se)
-        sl = fe_slope(d[d.stint_minutes >= short_lo], ["stint_minutes"]).iloc[0]  # pendiente tras calentar
+        sl = fe_slope(d[d.stint_minutes >= short_lo], ["stint_minutes"]).iloc[0]  # slope after warm-up
         rows.append({"season": str(season), "n": int(len(d)), "mu_pp": het["mu"] * 100, "mu_lo_pp": het["mu_lo"] * 100,
                      "mu_hi_pp": het["mu_hi"] * 100, "slope_pp": sl.coef_pp, "slope_lo_pp": sl.lo_pp,
                      "slope_hi_pp": sl.hi_pp, "k": int(het["k"])})
@@ -258,11 +255,11 @@ def season_replication(df: pd.DataFrame, short: float = SHORT_DEFAULT, long: flo
 
 def project_new_player(prior: dict, base_fg: float, own: dict = None) -> dict:
     """
-    Proyección para un jugador sin historial.
-    prior: salida de heterogeneity() (mu, tau2).
-    own  : opcional {"n_s","fg_s","n_l","fg_l"} con tiros propios (cortos/largos). Se combina por
-           precisión: la media a posteriori se acerca a lo observado cuando hay muchos tiros.
-    Devuelve el efecto largo-vs-corto esperado en pp con intervalo de predicción al 95%.
+    Projection for a player with no history.
+    prior: output of heterogeneity() (mu, tau2).
+    own  : optional {"n_s","fg_s","n_l","fg_l"} with the player's own short/long shots, combined by
+           precision: the posterior mean moves toward the observed value as shots accumulate.
+    Returns the expected long-vs-short effect with a 95% prediction interval.
     """
     mu, tau2 = prior["mu"], prior["tau2"]
     post_mu, post_var = mu, tau2 + prior["se_mu"] ** 2

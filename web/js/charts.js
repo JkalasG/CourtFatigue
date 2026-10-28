@@ -1,8 +1,9 @@
-/* CourtFatigue · gráficos SVG sin dependencias */
+/* CourtFatigue - dependency-free SVG charts */
 (function () {
   "use strict";
 
   const C = { accent: "#7ea4e6", accent2: "#cfe0fa", good: "#2dd4a0", bad: "#ff6b7a", blue: "#5f7ca8", muted: "#93a7cc", cyan: "#3acce6" };
+  const T = (k, v) => window.I18N.t(k, v);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmt = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 
@@ -26,16 +27,16 @@
     return (t) => t.toFixed(d);
   }
   function wrap(W, H, inner, label) {
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label || "gráfico")}">${inner}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label || T("chart.default"))}">${inner}</svg>`;
   }
   function empty(msg, W = 640, H = 160) {
     return wrap(W, H, `<text class="empty" x="${W / 2}" y="${H / 2}" text-anchor="middle">${esc(msg)}</text>`, msg);
   }
 
-  /* Línea con banda de confianza. pts: {x, y, lo, hi, tip} ; ticks: [{x,label}] */
+  /* Line with confidence band. pts: {x, y, lo, hi, tip}; ticks: [{x,label}] */
   function lineBand(o) {
     const pts = o.pts.filter((p) => p.y != null);
-    if (!pts.length) return empty(o.emptyMsg || "Sin datos suficientes");
+    if (!pts.length) return empty(o.emptyMsg || T("chart.nodata"));
     const W = o.W || 640, H = o.H || 310, m = { l: 52, r: 18, t: 16, b: 58 };
     const ys = pts.flatMap((p) => [p.lo, p.hi, p.y, o.includeZero === false ? null : 0]).filter((v) => v != null);
     let y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -50,7 +51,7 @@
     if (o.hatchFrom != null) {
       const hx = sx(o.hatchFrom);
       g += `<rect class="hatch" x="${hx}" y="${m.t}" width="${W - m.r - hx}" height="${H - m.b - m.t}"/>`;
-      g += `<text class="t" x="${(hx + W - m.r) / 2}" y="${m.t + 14}" text-anchor="middle">${esc(o.hatchLabel || "pocos datos")}</text>`;
+      g += `<text class="t" x="${(hx + W - m.r) / 2}" y="${m.t + 14}" text-anchor="middle">${esc(o.hatchLabel || T("chart.fewdata"))}</text>`;
     }
     if (y0 < 0 && y1 > 0) g += `<line class="zero" x1="${m.l}" x2="${W - m.r}" y1="${sy(0)}" y2="${sy(0)}"/>`;
     (o.ticks || []).forEach((t) => {
@@ -73,10 +74,10 @@
     return wrap(W, H, g, o.label);
   }
 
-  /* Forest plot horizontal. rows: {label, est, lo, hi, color, tip} */
+  /* Horizontal forest plot. rows: {label, est, lo, hi, color, tip} */
   function forest(o) {
     const rows = o.rows.filter((r) => r.est != null);
-    if (!rows.length) return empty(o.emptyMsg || "Sin datos suficientes");
+    if (!rows.length) return empty(o.emptyMsg || T("chart.nodata"));
     const W = o.W || 640, rowH = o.rowH || 34, m = { l: o.labelW || 190, r: 24, t: 10, b: 38 };
     const H = m.t + m.b + rows.length * rowH;
     let lo = Math.min(0, ...rows.map((r) => r.lo)), hi = Math.max(0, ...rows.map((r) => r.hi));
@@ -98,7 +99,7 @@
     return wrap(W, H, g, o.label);
   }
 
-  /* Barras agrupadas (porcentajes). groups: {label, bars:[{v, color, name}]} */
+  /* Grouped bars (percentages). groups: {label, bars:[{v, color, name}]} */
   function groupedBars(o) {
     const W = o.W || 640, H = o.H || 280, m = { l: 44, r: 12, t: 22, b: 52 };
     const max = Math.max(o.max || 0, ...o.groups.flatMap((g) => g.bars.map((b) => b.v)));
@@ -121,7 +122,7 @@
     return wrap(W, H, g, o.label);
   }
 
-  /* Barras simples verticales (cobertura de tiros por tramo). */
+  /* Simple vertical bars (shot coverage per bucket). */
   function coverageBars(o) {
     const W = o.W || 640, H = o.H || 280, m = { l: 54, r: 12, t: 22, b: 50 };
     const max = Math.max(...o.rows.map((r) => r.n));
@@ -133,16 +134,16 @@
     const gw = (W - m.l - m.r) / o.rows.length, bw = gw - 14;
     o.rows.forEach((r, i) => {
       const x = m.l + i * gw + 7, y = sy(r.n), thin = r.n < 8000;
-      g += `<rect class="bar" x="${x}" y="${y}" width="${bw}" height="${H - m.b - y}" rx="5" fill="${thin ? C.bad : C.blue}" opacity="${thin ? 0.85 : 1}"><title>${r.n} tiros · ${r.players} jugadores · ${(r.fg * 100).toFixed(1)}% de acierto</title></rect>`;
-      g += `<text class="lbl" x="${x + bw / 2}" y="${y - 6}" text-anchor="middle">${r.n.toLocaleString("es")}</text>`;
+      g += `<rect class="bar" x="${x}" y="${y}" width="${bw}" height="${H - m.b - y}" rx="5" fill="${thin ? C.bad : C.blue}" opacity="${thin ? 0.85 : 1}"><title>${T("chart.tip.cov", { n: r.n, p: r.players, fg: (r.fg * 100).toFixed(1) })}</title></rect>`;
+      g += `<text class="lbl" x="${x + bw / 2}" y="${y - 6}" text-anchor="middle">${window.I18N.num(r.n)}</text>`;
       g += `<text class="t" x="${x + bw / 2}" y="${H - m.b + 17}" text-anchor="middle">${r.lo}–${r.hi >= 24 ? "24" : r.hi}</text>`;
-      g += `<text class="t" x="${x + bw / 2}" y="${H - m.b + 31}" text-anchor="middle" style="opacity:.7">${r.players} jug.</text>`;
+      g += `<text class="t" x="${x + bw / 2}" y="${H - m.b + 31}" text-anchor="middle" style="opacity:.7">${r.players} ${T("chart.pl")}</text>`;
     });
-    g += `<text class="t" x="${(m.l + W - m.r) / 2}" y="${H - 2}" text-anchor="middle">minutos seguidos en cancha</text>`;
+    g += `<text class="t" x="${(m.l + W - m.r) / 2}" y="${H - 2}" text-anchor="middle">${esc(T("chart.min"))}</text>`;
     return wrap(W, H, g, o.label);
   }
 
-  /* Media cancha NBA. Coordenadas en décimas de pie; el eje Y se invierte con scale(1,-1). */
+  /* NBA half court. Coordinates in tenths of a foot; the Y axis is flipped with scale(1,-1). */
   function courtLines() {
     const arcA = Math.asin(92.5 / 237.5);
     const pts = [];
@@ -160,14 +161,14 @@
       <line x1="-30" y1="-7.5" x2="30" y2="-7.5" stroke="#cfe0fa" stroke-width="3"/>
       <circle cx="0" cy="0" r="7.5" stroke="#ffb36b"/></g>`;
   }
-  function court(shots) {
+  function court(shots, label) {
     let dots = "";
     shots.forEach((s) => {
       dots += s.m
         ? `<circle cx="${s.x}" cy="${s.y}" r="5.5" fill="#2dd4a0" fill-opacity=".75"/>`
         : `<g stroke="#ff5d6c" stroke-opacity=".7" stroke-width="2"><line x1="${s.x - 4.5}" y1="${s.y - 4.5}" x2="${s.x + 4.5}" y2="${s.y + 4.5}"/><line x1="${s.x - 4.5}" y1="${s.y + 4.5}" x2="${s.x + 4.5}" y2="${s.y - 4.5}"/></g>`;
     });
-    return `<svg viewBox="-260 -432 520 490" role="img" aria-label="mapa de tiros"><g transform="scale(1,-1)">${courtLines()}${dots}</g></svg>`;
+    return `<svg viewBox="-260 -432 520 490" role="img" aria-label="${esc(label || "")}"><g transform="scale(1,-1)">${courtLines()}${dots}</g></svg>`;
   }
 
   window.CF = { lineBand, forest, groupedBars, coverageBars, court, fmt, esc, C };

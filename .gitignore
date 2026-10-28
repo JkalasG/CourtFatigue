@@ -1,31 +1,28 @@
-# Entorno virtual
+# Virtual environment
 venv/
 .env
 
-# Archivos pesados de datos brutos (descargables via script)
+# Heavy raw data (downloadable with the scripts)
 data/raw/*.tar.xz
 data/raw/nbastats_2024.csv
 
-# Python caché
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 
-# Streamlit
-.streamlit/
-
-# Intermedio regenerable (src/stint_calculator.py)
+# Regenerable intermediates (src/stint_calculator.py)
 data/processed/shots_with_stints.csv
 data/processed/shots_sample_stints.csv
 
-# Temporadas adicionales (se descargan con scripts/download_seasons.py) y datos procesados grandes
+# Extra seasons (downloaded with scripts/download_seasons.py) and large processed data
 data/raw/seasons/
 data/processed/by_season/
 data/processed/shots_fatigue_processed.csv
 
-# Datos externos descargables con scripts/download_shot_logs.py
+# External data downloadable with scripts/download_shot_logs.py
 data/raw/external/
 
-# Three.js local para tests/test_simulator.js
+# Local Three.js for tests/test_simulator.js
 tests/three.min.js

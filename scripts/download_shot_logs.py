@@ -1,11 +1,11 @@
 """
-Descarga el registro de tiros 2014-15 con distancia al defensor (Kaggle "NBA shot logs", licencia CC0)
-desde el espejo de OpenML y lo convierte a CSV.
+Download the 2014-15 shot log with defender distance (Kaggle "NBA shot logs", CC0)
+from the OpenML mirror and convert it to CSV.
 
-Uso:  python scripts/download_shot_logs.py        (requiere pandas)
-Salida: data/raw/external/shot_logs_2014/shot_logs_2014.csv  (128,069 tiros, 904 partidos, hasta el 4-mar-2015)
+Usage:  python scripts/download_shot_logs.py        (requires pandas)
+Output: data/raw/external/shot_logs_2014/shot_logs_2014.csv  (128,069 shots, 904 games, through 4 Mar 2015)
 
-El archivo se trata como NO confiable: solo se lee como texto ARFF; no se ejecuta nada de él.
+The file is treated as UNTRUSTED: it is only read as ARFF text; nothing in it is executed.
 """
 import os
 import re
@@ -20,7 +20,7 @@ OUT_DIR = os.path.join("data", "raw", "external", "shot_logs_2014")
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     arff = os.path.join(OUT_DIR, "nba-shot-logs.arff")
-    print("descargando", URL)
+    print("downloading", URL)
     urllib.request.urlretrieve(URL, arff)
     names, start = [], 0
     with open(arff, encoding="utf-8", errors="replace") as f:
@@ -34,7 +34,7 @@ def main():
     d = pd.read_csv(arff, skiprows=start, names=names, quotechar="'", escapechar="\\", na_values=["?"], engine="python")
     out = os.path.join(OUT_DIR, "shot_logs_2014.csv")
     d.to_csv(out, index=False)
-    print(f"{len(d):,} tiros -> {out}")
+    print(f"{len(d):,} shots -> {out}")
 
 
 if __name__ == "__main__":

@@ -1,124 +1,147 @@
-# 🏀 CourtFatigue: ¿cuándo deja de rendir un jugador y dónde lo nota la cancha?
+[English](README.md) | [Español](README.es.md)
 
-> Proyecto para el **AQX Sports Analytics Data Bowl 4.0**.
-> Interfaz en HTML + CSS + JS (sin librerías), análisis en Python, simulador 3D con Three.js.
+# CourtFatigue: when does a player stop performing, and where does the court notice?
 
-CourtFatigue mide si el acierto de tiro de un jugador de la NBA cae cuando lleva muchos minutos seguidos en cancha, **descontando la dificultad de cada tiro**, y dice con qué certeza se puede afirmar algo de un jugador concreto, o de uno nuevo sin historial. Un simulador 3D permite probar el efecto de los minutos, del equipo rival y de la distancia del defensor, con cada término medido en datos.
+> Project for the **AQX Sports Analytics Data Bowl 4.0**.
+> Interface in HTML + CSS + JS (no libraries, English and Spanish), analysis in Python, 3D simulator with Three.js.
 
-## Resultado principal
+CourtFatigue measures whether an NBA player's shooting accuracy drops when they have been on court for many consecutive minutes, **discounting the difficulty of each shot**, and says how certainly anything can be claimed about a specific player, or about a new one with no history. A 3D simulator lets you test the effect of minutes, the rival team and the defender distance, with every term measured in data.
 
-**Datos:** temporadas regulares NBA 2021-22 a 2024-25 · 4,920 partidos · 872,158 tiros · 913 jugadores.
+## Main result
 
-| Pregunta | Resultado |
+**Data:** NBA regular seasons 2021-22 to 2024-25 · 4,920 games · 872,158 shots · 913 players.
+
+| Question | Result |
 | --- | --- |
-| ¿Cae el acierto tras ≥ 8 min seguidos, frente a un jugador ya calentado (2-6 min)? | **+0.21 pp** (IC 95%: −0.13 a +0.56): no. Se descartan caídas promedio mayores a ~0.13 pp |
-| Pendiente por minuto seguido, tras calentar | +0.027 pp/min (IC 95%: −0.014 a +0.069): plana |
-| ¿Se repite temporada por temporada? | Sí: +0.41, +0.32, −0.36 y +0.18 pp (todos con IC que incluye 0) |
-| Jugadores con caída demostrable (IC 95% < 0 y corrección FDR) | **0 de 592** |
-| Zonas de la cancha con caída significativa (tras calentar) | **0 de 6**. Las dos interiores muestran una mejora leve (+0.11 y +0.16 pp/min) |
-| Características del jugador que modifican el efecto | **0 de 7** |
-| **Arranque frío** (tras entrar a cancha) | **−1.46 pp** en los primeros 30 s (IC −1.95 a −0.97), −0.50 pp entre 30 y 60 s, −0.39 pp entre 1 y 2 min; normal desde los 2 min. Negativo en las 4 temporadas (intervalo claro en 3 de 4); con otra regla de stints (reinicio en cada cuarto) sigue en −1.08 pp (IC −1.50 a −0.65) |
-| Calendario y contexto | back-to-back **−0.39 pp** (IC −0.67 a −0.11); jugar en casa **+0.38 pp** (IC +0.11 a +0.65) |
-| Defensa del rival | Efecto real y estable entre temporadas (r ≈ 0.52): de −1.2 pp (Thunder) a +1.7 pp (Kings) en 2024-25 |
+| Does accuracy drop after ≥ 8 consecutive min, versus an already warmed-up player (2-6 min)? | **+0.21 pp** (95% CI: −0.13 to +0.56): no. Average drops larger than ~0.13 pp are ruled out |
+| Slope per consecutive minute, after warm-up | +0.027 pp/min (95% CI: −0.014 to +0.069): flat |
+| Does it repeat season by season? | Yes: +0.41, +0.32, −0.36 and +0.18 pp (all with a CI that includes 0) |
+| Players with a demonstrable drop (95% CI < 0 and FDR correction) | **0 of 592** |
+| Court zones with a significant drop (after warm-up) | **0 of 6**. The two interior zones show a slight improvement (+0.11 and +0.16 pp/min) |
+| Player traits that modify the effect | **0 of 7** |
+| **Cold start** (after entering the court) | **−1.46 pp** in the first 30 s (CI −1.95 to −0.97), −0.50 pp between 30 and 60 s, −0.39 pp between 1 and 2 min; normal from 2 min. Negative in all 4 seasons (clear interval in 3 of 4); under another stint rule (reset every quarter) it stays at −1.08 pp (CI −1.50 to −0.65) |
+| Schedule and context | back-to-back **−0.39 pp** (CI −0.67 to −0.11); playing at home **+0.38 pp** (CI +0.11 to +0.65) |
+| Rival defense | Real effect, stable across seasons (r ≈ 0.52): from −1.2 pp (Thunder) to +1.7 pp (Kings) in 2024-25 |
 
-**No hay fatiga de tiro detectable hasta ~12 minutos seguidos.** Es compatible con que las rotaciones actuales ya evitan los tramos donde el tiro se deterioraría. Lo que sí se ve es un **arranque frío**, y calendario y localía con efectos pequeños pero consistentes. A nivel individual la potencia es limitada: el error estándar típico por jugador es de ~5 pp, así que solo se detectarían caídas de unos 14 pp o más. Por eso la herramienta no etiqueta a ningún jugador como "el que se cansa", y lo dice.
+**There is no detectable shooting fatigue up to ~12 consecutive minutes.** This is compatible with current rotations already avoiding the stretches where shooting would deteriorate. What does show up is a **cold start**, and schedule and home court with small but consistent effects. At the individual level power is limited: the typical standard error per player is ~5 pp, so only drops of about 14 pp or more would be detected. That is why the tool labels no player as "the one who tires", and says so.
 
-> **Por qué la comparación es contra jugadores ya calentados.** Comparar ≥ 8 min contra todo lo que sea < 4 min da +0.65 pp, pero eso mezcla el arranque frío con la fatiga. Con la referencia de 2-6 min el efecto baja a +0.21 pp. La pendiente con todos los tramos (+0.097 pp/min) también está inflada por el arranque; tras calentar es +0.027.
+> **Why the comparison is against warmed-up players.** Comparing ≥ 8 min against everything under 4 min gives +0.65 pp, but that mixes the cold start with fatigue. With the 2-6 min reference the effect drops to +0.21 pp. The slope with all buckets (+0.097 pp/min) is also inflated by the cold start; after warm-up it is +0.027.
 
-### Por qué importa la inferencia: la regla ingenua no funciona
-Una regla del tipo *"sustituir cuando el acierto cae 3 puntos en algún tramo con ≥ 20 tiros"* marca al **60.5%** de los jugadores con los datos reales y al **59.4%** cuando los minutos se barajan al azar dentro de cada jugador (donde la fatiga no puede existir). Es ruido. La regla de este proyecto (IC 95% excluye 0 y corrección de Benjamini-Hochberg) marca **0%** con los datos reales y 0.04% con los minutos al azar. Esta comparación está en la pestaña *Evidencia* y se verifica con pruebas sintéticas en `tests/`.
+### Why inference matters: the naive rule does not work
+A rule such as *"substitute when accuracy drops 3 points in some bucket with ≥ 20 shots"* flags **60.5%** of players with real data and **59.4%** when minutes are shuffled at random within each player (where fatigue cannot exist). That is noise. This project's rule (95% CI excludes 0 and Benjamini-Hochberg correction) flags **0%** with real data and 0.04% with random minutes. This comparison is in the *Evidence* tab and is verified with synthetic tests in `tests/`.
 
-### Robustez
-La pendiente por minuto resiste: excluir partidos decididos (diferencia ≥ 20), usar solo partidos parejos (≤ 10), controlar por minutos del partido, local o visitante, marcador y back-to-back, reiniciar el contador en cada cuarto e incluir los tiros con stint incierto (todas entre +0.09 y +0.11 pp/min con todos los tramos; tras calentar, +0.027).
+### Robustness
+The slope per minute holds under: excluding blowouts (margin ≥ 20), using only close games (≤ 10), controlling for game minutes, home or away, score and back-to-back, resetting the counter every quarter and including shots with an uncertain stint (all between +0.09 and +0.11 pp/min with all buckets; after warm-up, +0.027).
 
-## Interfaz
+## Interface
 
-Pestañas: **Resumen** (con "En 30 segundos", panel para el cuerpo técnico y glosario en lenguaje llano) · **Jugador** (curva, IC, mapas descansado vs. cansado) · **Evidencia** (cobertura de datos, robustez, temporada por temporada, arranque frío, zonas, características, ranking defensivo) · **Jugador nuevo** (proyección con incertidumbre) · **Método** (+ simulador 3D).
+Tabs: **Summary** (with "In 30 seconds", a coaching-staff panel and a plain-language glossary) · **Player** (curve, CI, rested vs. tired maps) · **Evidence** (data coverage, robustness, season by season, cold start, zones, traits, defensive ranking) · **New player** (projection with uncertainty) · **Method** (+ 3D simulator).
 
-Identidad visual tomada del hackatón AQX (azul marino, azul acero y blanco).
+The language (English or Spanish) is chosen with the EN / ES switch in the top bar; it is remembered in the browser and shared with the simulator. It can also be forced with `?lang=es` or `?lang=en`. The visual identity follows the AQX hackathon (navy blue, steel blue and white).
+
+The page is static (the `web/` folder) and is published automatically to GitHub Pages. How to run it on your computer: see [Instructions to clone and run](#instructions-to-clone-and-run), at the end.
+
+For the Devpost submission: [docs/devpost_description.md](docs/devpost_description.md) (text) and [docs/video_script_2min.md](docs/video_script_2min.md) (optional script). Longer description: [docs/project_description.md](docs/project_description.md).
+
+## 3D simulator (`web/simulador/`)
+
+The scoring probability is built by adding measured terms; nothing is hand-written:
+
+| Term | Source |
+| --- | --- |
+| Player base accuracy | each player's real FG% in 2021-25 |
+| Shot distance | accuracy-by-distance curve from our 4 seasons (e.g. −11 pp on a 25 ft three) |
+| Defender distance (1.5-8 ft) | 128,065 shots from 2014-15 with that data (CC0), monotone gradient boosting with a game-resampling confidence band. The adjustment is **relative to the typical defender distance for that shot type** (≈5.5 ft on a three, ≈2.3 ft near the rim), because the shot-distance curve already includes how closely it is usually guarded; this way nothing is counted twice |
+| Rival team | the team's defensive effect in 2024-25, shrunk toward the league |
+| Cold start | measured: −1.46 pp (0-30 s), −0.50 pp (30-60 s), −0.39 pp (1-2 min) |
+| Fatigue | slope measured after warm-up (+0.027 pp/min; pessimistic scenario: lower bound of the CI) |
+
+The defender distance starts at the typical value for each shot (it can be set by hand). The shot follows a **physical parabola** (projectile motion from the hand to the hoop, with launch speed and angle computed; no hand-written arc heights) shown dotted before shooting and as a trail during flight, and the TV camera is lateral so it is seen from the side. The positions of the other four defenders are **illustrative**; only the main defender has an effect, through their distance to the shooter, and they are drawn slightly off the line to the hoop, as defenders play in practice. The defender-distance effect is association on data from another era and mixes in fast breaks with no defender; the rival effect is the team average, not that of a specific defender.
+
+## Methodology
+
+> **Data quality and cleaning:** [DATA_QUALITY.md](DATA_QUALITY.md) (shot funnel, checks per season, cross-check between the two sources and what was done about each finding).
+
+1. **Stints** (`src/stint_calculator.py`): consecutive minutes on court at the moment of each shot, counting game-clock time only. The counter continues across Q1→Q2 and Q3→Q4 and **resets at halftime**. The play-by-play does not record substitutions between quarters: in each quarter we detect who was already on court and they keep their counter if they came from the previous quarter. Only ~0.3% of shots have an uncertain stint and they are excluded from the main analysis. The shooter team's margin and the home flag are also saved.
+2. **Expected shot** (`src/xshot_model.py`): gradient boosting on distance, coordinates, zone, shot type, period and time remaining; no minutes on court or player identity. Double validation: game-grouped cross-validation (log-loss 0.6397 vs. 0.6913 without a model, AUC 0.657, calibration error 0.17 pp) and **temporal** (train on 2021-22 to 2023-24 and evaluate on 2024-25, which it never saw: log-loss 0.6407 vs. 0.6910, AUC 0.654, calibration 0.50 pp). Metrics in `data/processed/xshot_metrics.json`.
+3. **Fatigue effect** (`src/fatigue_stats.py`): each player is compared with their own level **in that season**. Per-player contrast (residual with ≥ 8 min − residual with 2-6 min), slope with fixed effects and player-clustered robust errors, random effects (DerSimonian-Laird) for differences between players, Benjamini-Hochberg correction and placebo test.
+4. **Cold start, schedule and context**: performance by time since entering, by quarter and by first entry vs. re-entry; control for back-to-back (computed from dates), home and score.
+5. **Defense** (`scripts/build_defense_data.py`): team effect (with empirical-Bayes shrinkage) and defender-distance table.
+6. **New player**: baseline accuracy from their shot profile by zone + level; the fatigue effect comes from the population distribution (mean and τ). If own shots are entered they are combined by precision (normal-normal).
+7. **Uncertainty**: everything is shown with a 95% CI; buckets with few shots are flagged and not interpolated.
+
+## Limitations
+
+- **Association, not causation**: coaches substitute whoever they see as tired, so long stints are biased toward players who are doing well. This may hide real fatigue.
+- **No defender data in the main analysis.** In 2014-15, knowing the defender distance raises the expected-shot AUC from 0.617 to 0.634 (0.642 with shot clock, touch time and dribbles). Our model leaves that part as noise, and we cannot check whether it biases the comparison between minutes.
+- No individual physical-condition or load data.
+- There are almost no shots after more than ~12 consecutive minutes: beyond that, any projection is extrapolation.
+- Limited power per player (see above). "Not detected" does not mean "does not exist".
+- The defender-distance effect comes from another era (2014-15, incomplete season) and another measurement system.
+- The thresholds (2-6 min as reference, 8 min as "long") are a choice; the continuous slope is reported as an alternative.
+
+## Future work
+
+Tracking data (defender positions) in recent seasons · accumulated load from travel and schedule · biometrics · defensive impact of fatigue.
+
+## Data
+
+Three sets are used: NBA **shots** and **play-by-play** (4 seasons, 2021-22 to 2024-25) and a 2014-15 shot log with **defender distance** (CC0).
+
+> **Descriptive table of the datasets, with download links, licenses and generated files:** [DATASETS.md](DATASETS.md). Column dictionary: [data/README.md](data/README.md).
+
+## System structure
+
+Data go through `src/` (analysis calculation), `scripts/` (packaging) and `web/` (page and 3D simulator).
+
+> **What each folder and file does:** [STRUCTURE.md](STRUCTURE.md).
+
+## Credits and license
+
+- AQX Analytics Hackathon and Devpost logos: they belong to their owners; they are used to identify the competition.
+- 3D court: Three.js (MIT).
+- Code license: MIT.
+
+## Instructions to clone and run
+
+**1. Clone and install**
+
+```bash
+git clone <REPOSITORY-URL>
+cd <repository-folder>
+python -m venv venv
+venv\Scripts\activate           # Windows (on macOS/Linux: source venv/bin/activate)
+pip install -r requirements.txt
+```
+
+**2. View the page and the simulator** (the results already ship generated in `web/data/`)
 
 ```bash
 cd web
-python -m http.server 8000      # abrir http://localhost:8000
+python -m http.server 8000      # open http://localhost:8000
 ```
-Hace falta un servidor local porque el navegador bloquea `fetch` desde `file://`. La carpeta `web/` es estática. `.github/workflows/pages.yml` la publica en GitHub Pages en cada push a `main` (activar en Settings → Pages → Source: *GitHub Actions*).
+A local server is needed because the browser blocks `fetch` from `file://`. The 3D simulator is at `http://localhost:8000/simulador/`. `.github/workflows/pages.yml` publishes `web/` to GitHub Pages on every push to `main` (enable it in Settings → Pages → Source: *GitHub Actions*).
 
-Para el envío a Devpost: `docs/devpost_descripcion.md` (texto) y `docs/guion_video_2min.md` (guion opcional).
-
-## Simulador 3D (`web/simulador/`)
-
-La probabilidad de anotar se construye sumando términos medidos; nada está escrito a mano:
-
-| Término | Fuente |
-| --- | --- |
-| Acierto base del jugador | FG% real de cada jugador en 2021-25 |
-| Distancia del tiro | curva de acierto por distancia de nuestras 4 temporadas (p. ej., −11 pp en un triple de 25 ft) |
-| Distancia al defensor (1.5-8 ft) | 128,065 tiros de la temporada 2014-15 con ese dato (CC0), gradient boosting monótono con banda de confianza por remuestreo de partidos. El ajuste es **relativo a la distancia típica del defensor para ese tipo de tiro** (≈5.5 ft en un triple, ≈2.3 ft cerca del aro), porque la curva por distancia del tiro ya incluye cuánto suele estar marcado; así no se cuenta dos veces |
-| Equipo rival | efecto defensivo del equipo en 2024-25, suavizado hacia la liga |
-| Arranque frío | medido: −1.46 pp (0-30 s), −0.50 pp (30-60 s), −0.39 pp (1-2 min) |
-| Fatiga | pendiente medida tras calentar (+0.027 pp/min; escenario pesimista: límite inferior del IC) |
-
-La distancia del defensor arranca en el valor típico de cada tiro (se puede fijar a mano). El tiro sigue una **parábola física** (movimiento de un proyectil desde la mano hasta el aro, con velocidad y ángulo de salida calculados; sin alturas de arco escritas a mano) que se muestra punteada antes de lanzar y como estela durante el vuelo, y la cámara TV es lateral para verla de perfil. Las posiciones de los otros cuatro defensores son **ilustrativas**; solo el defensor principal tiene efecto, a través de su distancia al tirador, y se dibuja algo desplazado de la línea al aro, como se defiende en la práctica. El efecto de la distancia al defensor es asociación en datos de otra época y mezcla contraataques sin defensor; el del rival es el del equipo en promedio, no el de un defensor concreto.
-
-## Metodología
-
-1. **Stints** (`src/stint_calculator.py`): minutos seguidos en pista al momento de cada tiro, contando solo tiempo de juego. El contador sigue entre Q1→Q2 y Q3→Q4 y **se reinicia en el medio tiempo**. El play-by-play no registra las sustituciones entre cuartos: en cada cuarto se detecta quién ya estaba en pista y conserva su contador si venía del cuarto anterior. Solo ~0.3% de los tiros tiene stint incierto y se excluye del análisis principal. También se guarda la ventaja del equipo del tirador y si juega de local.
-2. **Tiro esperado** (`src/xshot_model.py`): gradient boosting con distancia, coordenadas, zona, tipo de tiro, periodo y tiempo restante; sin minutos en pista ni identidad del jugador. Validación doble: cruzada por partido (log-loss 0.6397 frente a 0.6913 sin modelo, AUC 0.657, error de calibración 0.17 pp) y **temporal** (entrena con 2021-22 a 2023-24 y evalúa en 2024-25, que no vio: log-loss 0.6407 frente a 0.6910, AUC 0.654, calibración 0.50 pp). Métricas en `data/processed/xshot_metrics.json`.
-3. **Efecto de fatiga** (`src/fatigue_stats.py`): cada jugador se compara con su propio nivel **en esa temporada**. Contraste por jugador (residuo con ≥ 8 min − residuo con 2-6 min), pendiente con efectos fijos y errores robustos agrupados por jugador, efectos aleatorios (DerSimonian-Laird) para las diferencias entre jugadores, corrección de Benjamini-Hochberg y prueba placebo.
-4. **Arranque frío, calendario y contexto**: rendimiento por tiempo desde la entrada, por cuarto y según primera entrada o re-entrada; control por back-to-back (calculado con las fechas), local y marcador.
-5. **Defensa** (`scripts/build_defense_data.py`): efecto por equipo (con suavizado empirical Bayes) y tabla de distancia al defensor.
-6. **Jugador nuevo**: acierto base según su perfil de tiro por zona + nivel; el efecto de fatiga sale de la distribución poblacional (promedio y τ). Si se ingresan tiros propios, se combinan por precisión (normal-normal).
-7. **Incertidumbre**: todo se muestra con IC 95%; los tramos con pocos tiros se marcan y no se interpolan.
-
-## Reproducir el análisis
+**3. Reproduce the analysis from scratch** (optional; downloads hundreds of MB)
 
 ```bash
-pip install -r requirements.txt
-python scripts/download_seasons.py 2021 2022 2023   # NBA 2021-22 a 2023-24 (la 2024-25 ya está en data/raw/)
-python scripts/download_shot_logs.py                # 2014-15 con distancia al defensor (CC0)
+python scripts/download_seasons.py 2021 2022 2023   # NBA 2021-22 to 2023-24 (2024-25 already ships in data/raw/)
+python scripts/download_shot_logs.py                # 2014-15 with defender distance (CC0)
 
-python src/stint_calculator.py 2021 2022 2023 2024  # ~3 min por temporada
-python src/xshot_model.py                           # modelo de tiro esperado (validación cruzada + temporal)
-python scripts/build_web_data.py                    # estadística y datos de la interfaz (incluye placebo)
-python scripts/build_defense_data.py                # defensa de equipos y distancia al defensor
-python scripts/build_defense_data.py gap            # brecha de precisión con y sin datos del defensor
+python src/stint_calculator.py 2021 2022 2023 2024  # ~3 min per season
+python src/xshot_model.py                           # expected-shot model (cross-validated + temporal)
+python scripts/data_quality.py                      # data-quality audit -> DATA_QUALITY.md
+python scripts/build_web_data.py                    # statistics and interface data (includes placebo)
+python scripts/build_defense_data.py                # team defense and defender distance
+python scripts/build_defense_data.py gap            # accuracy gap with and without defender data
+```
 
-python tests/test_fatigue_stats.py                  # 6 pruebas con datos sintéticos
+**4. Tests**
+
+```bash
+python tests/test_fatigue_stats.py                  # 6 tests on synthetic data
 curl -o tests/three.min.js https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js
-node tests/test_simulator.js                        # modelo de probabilidad, defensores y física del tiro (178 comprobaciones)
-```
-`data/raw/nbastats_2024.csv` (94 MB) no se versiona; está comprimido como `.tar.xz`. Las temporadas adicionales, el dataset externo y los CSV procesados grandes se regeneran con los scripts y están en `.gitignore`.
-
-## Estructura
-
-```text
-├── data/            raw/ (tiros y play-by-play) · processed/ · README.md (diccionario)
-├── src/             stint_calculator.py · xshot_model.py · fatigue_stats.py
-├── scripts/         build_web_data.py · build_defense_data.py · download_seasons.py · download_shot_logs.py
-├── tests/           pruebas del módulo estadístico (datos sintéticos)
-├── web/             index.html · css/ · js/ · assets/ (logos AQX y Devpost) · data/ (JSON generado) · simulador/ (3D)
-├── docs/            texto de Devpost y guion de video
-└── documentacion/   descripción del proyecto
+node tests/test_simulator.js                        # probability model, defenders and shot physics (178 checks)
 ```
 
-## Limitaciones
-
-- **Asociación, no causalidad**: los entrenadores sustituyen a quien ven cansado, así que los stints largos están sesgados hacia jugadores que van bien. Esto puede ocultar fatiga real.
-- **Sin datos del defensor en el análisis principal.** En la temporada 2014-15, conocer la distancia al defensor sube el AUC del tiro esperado de 0.617 a 0.634 (0.642 con reloj de posesión, toques y regates). Nuestro modelo deja esa parte como ruido, y no podemos comprobar si sesga la comparación entre minutos.
-- Sin datos de condición física individual ni de carga.
-- Casi no hay tiros con más de ~12 min seguidos: más allá, cualquier proyección es extrapolación.
-- Potencia limitada por jugador (ver arriba). "No detectado" no significa "no existe".
-- El efecto de la distancia al defensor viene de otra época (2014-15, temporada incompleta) y de otro sistema de medición.
-- Los umbrales (2-6 min como referencia, 8 min como "largo") son una elección; la pendiente continua se reporta como alternativa.
-
-## Trabajo futuro
-
-Datos de seguimiento (posición de los defensores) en las temporadas recientes · carga acumulada por viajes y calendario · biometría · impacto defensivo de la fatiga.
-
-## Datos y créditos
-
-- NBA Stats API a través del repositorio público [`shufinskiy/nba_data`](https://github.com/shufinskiy/nba_data) (uso no comercial).
-- Registro de tiros 2014-15 ("NBA shot logs"): espejo de OpenML, licencia CC0.
-- Logos de AQX Analytics Hackathon y Devpost: pertenecen a sus titulares; se usan para identificar el concurso.
-
-**Licencia del código:** MIT.
+`data/raw/nbastats_2024.csv` (94 MB) is not versioned; it is shipped compressed as `.tar.xz`. The extra seasons, the external dataset and the large processed CSVs are regenerated with the scripts and are in `.gitignore`.

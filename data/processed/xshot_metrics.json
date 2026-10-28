@@ -31,5 +31,5 @@
   },
   "chosen": "boosting",
   "n_shots": 872158,
-  "validation": "GroupKFold(5) por partido, fuera de muestra"
+  "validation": "GroupKFold(5) by game, out-of-sample"
 }

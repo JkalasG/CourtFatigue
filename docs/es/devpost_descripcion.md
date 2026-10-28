@@ -1,3 +1,5 @@
+[English](../devpost_description.md) | [Español](devpost_descripcion.md)
+
 # CourtFatigue — texto para Devpost
 
 > Copiar en los campos del formulario. Reemplazar `[URL DEMO]` y `[URL REPO]` al publicar.

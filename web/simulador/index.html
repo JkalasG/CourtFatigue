@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en" data-title-key="sim.doc.title">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CourtFatigue 3D | Simulador de Tiro y Fatiga NBA</title>
+    <title>CourtFatigue 3D | NBA Shooting and Fatigue Simulator</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Three.js y OrbitControls -->
+    <!-- Three.js and OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="../js/i18n.js"></script>
     
     <style>
         * {
@@ -39,7 +40,7 @@
             cursor: crosshair;
         }
 
-        /* Indicador flotante sobre la cancha: Haz clic para cambiar lugar */
+        /* Floating hint over the court */
         .court-hint {
             position: absolute;
             top: 75px;
@@ -59,7 +60,7 @@
             gap: 6px;
         }
 
-        /* HUD Superior: Marcador Digital de Fatiga */
+        /* Top HUD: digital fatigue scoreboard */
         .hud-header {
             position: absolute;
             top: 15px;
@@ -147,7 +148,7 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
-        /* Herramientas de Cámara Superior Derecha */
+        /* Camera tools, top right */
         .camera-tools {
             position: absolute;
             top: 15px;
@@ -179,7 +180,7 @@
             border-color: #38BDF8;
         }
 
-        /* Tarjetas Flotantes Arrastrables y Minimizables */
+        /* Draggable, collapsible floating cards */
         .floating-card {
             position: absolute;
             z-index: 10;
@@ -245,14 +246,14 @@
             display: none;
         }
 
-        /* Posición Inicial de Controles (Izquierda) */
+        /* Initial position of the controls (left) */
         #controls-panel {
             bottom: 15px;
             left: 15px;
             width: 300px;
         }
 
-        /* Posición Inicial de Métricas (Derecha) */
+        /* Initial position of the metrics (right) */
         #metrics-panel {
             bottom: 15px;
             right: 15px;
@@ -319,7 +320,7 @@
             transition: transform 0.1s;
         }
 
-        /* Botón de Lanzamiento */
+        /* Shoot button */
         .btn-shoot {
             width: 100%;
             padding: 10px;
@@ -353,7 +354,7 @@
             transform: none;
         }
 
-        /* Métricas */
+        /* Metrics */
         .metric-row {
             display: flex;
             justify-content: space-between;
@@ -385,7 +386,7 @@
             transition: width 0.3s ease, background 0.3s ease;
         }
 
-        /* Banner de Canasta / Fallo */
+        /* Made / missed banner */
         #result-banner {
             position: absolute;
             top: 115px;
@@ -422,7 +423,7 @@
             opacity: 1;
         }
 
-        /* Responsividad */
+        /* Responsive layout */
         @media (max-width: 820px) {
             #controls-panel {
                 bottom: 10px;
@@ -448,60 +449,82 @@
             .chk { display:flex; gap:8px; align-items:flex-start; font-size:.7rem; color:#94A3B8; margin:2px 0 12px; line-height:1.3; cursor:pointer; }
         .chk input { margin-top:2px; accent-color:#7EA4E6; }
         .metric-row .ci { font-size:.62rem; color:#94A3B8; font-weight:500; margin-left:4px; }
+        /* Icons and language switch */
+        .ic { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.2em; flex: none; }
+        .lang-sim { display: flex; gap: 2px; padding: 3px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; }
+        .lang-sim button { background: transparent; border: 0; color: #94A3B8; font-size: .72rem; font-weight: 700; padding: 5px 9px; border-radius: 16px; cursor: pointer; }
+        .lang-sim button.on { background: #7EA4E6; color: #010F2E; }
+        .card-title .ic { margin-right: 6px; color: #7EA4E6; }
+        a.btn-tool { text-decoration: none; }
     </style>
 </head>
 <body>
 
-    <!-- Canvas para Three.js -->
+    <!-- Icon sprite -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+        <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+        <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2v20M5 4.5c4 3 4 12 0 15M19 4.5c-4 3-4 12 0 15"/></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+    </defs></svg>
+
+    <!-- Three.js canvas -->
     <canvas id="webgl-canvas"></canvas>
 
-    <!-- Indicador interactivo para hacer clic en la cancha -->
+    <!-- Click hint -->
     <div class="court-hint">
-        <span>🎯</span> Haz clic en cualquier lugar de la cancha para posicionar al tirador
+        <svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> <span data-i18n="sim.hint"></span>
     </div>
 
-    <!-- Marcador Superior Digital (HUD) -->
+    <!-- Top HUD -->
     <div class="hud-header" id="hud-header">
         <div class="hud-item">
-            <span class="hud-label">Minutos Seguidos (Stint)</span>
+            <span class="hud-label" data-i18n="sim.hud.stint"></span>
             <div id="hud-clock" class="hud-clock">02:30</div>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-item">
-            <span class="hud-label">Estado Físico</span>
-            <div id="hud-status" class="hud-badge">DESCANSADO</div>
+            <span class="hud-label" data-i18n="sim.hud.status"></span>
+            <div id="hud-status" class="hud-badge">RESTED</div>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-item">
-            <span class="hud-label">Efecto Fatiga</span>
+            <span class="hud-label" data-i18n="sim.hud.fatigue"></span>
             <div id="hud-delta" style="font-weight: 700; color: #10B981; font-size: 1rem;">0.0 pp</div>
-            <select id="fatigue-scenario" style="margin-top:4px;background:#0B0F19;color:#E5E7EB;border:1px solid #334155;border-radius:6px;font-size:.7rem;padding:2px 4px;"><option value="central">Escenario: datos</option><option value="pessimistic">Escenario: pesimista</option></select>
+            <select id="fatigue-scenario" style="margin-top:4px;background:#0B0F19;color:#E5E7EB;border:1px solid #334155;border-radius:6px;font-size:.7rem;padding:2px 4px;"><option value="central" data-i18n="sim.scn.data"></option><option value="pessimistic" data-i18n="sim.scn.pess"></option></select>
             <div id="fatigue-note" style="font-size:.62rem;color:#94A3B8;max-width:220px;margin-top:3px;"></div>
         </div>
     </div>
 
-    <!-- Banner Animado de Canasta / Fallo -->
-    <div id="result-banner">¡CANASTA! (SWISH)</div>
+    <!-- Animated made / missed banner -->
+    <div id="result-banner">SWISH</div>
 
-    <!-- Herramientas de Cámara Superior Derecha -->
+    <!-- Camera tools, top right -->
     <div class="camera-tools">
-        <button id="btn-camera" class="btn-tool" onclick="cycleCamera()">🎥 Vista: TV</button>
-        <button id="btn-reset-stint" class="btn-tool" onclick="resetStint()">🔄 Reiniciar</button>
+        <a class="btn-tool" href="../index.html"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg><span data-i18n="sim.back"></span></a>
+        <button id="btn-camera" class="btn-tool" onclick="cycleCamera()"></button>
+        <button id="btn-reset-stint" class="btn-tool" onclick="resetStint()"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span data-i18n="sim.reset"></span></button>
+        <div class="lang-sim" id="lang-switch" role="group" aria-label="Language">
+            <button data-lang="en" class="on">EN</button><button data-lang="es">ES</button>
+        </div>
     </div>
 
-    <!-- Panel de Control Arrastrable y Minimizable (Izquierda) -->
+    <!-- Draggable, collapsible control panel (left) -->
     <div class="floating-card" id="controls-panel">
         <div class="card-header" id="controls-drag-handle">
             <div class="card-title">
-                <span>🏀</span> Controles de Tiro
+                <svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg><span data-i18n="sim.controls"></span>
             </div>
-            <button class="card-btn-min" id="btn-min-controls" onclick="toggleCard('controls')" title="Minimizar / Expandir panel">−</button>
+            <button class="card-btn-min" id="btn-min-controls" onclick="toggleCard('controls')" data-i18n-title="sim.min.title">−</button>
         </div>
 
         <div class="card-body" id="controls-body">
             <div class="control-group">
                 <div class="control-label">
-                    <span>Jugador NBA:</span>
+                    <span data-i18n="sim.player"></span>
                 </div>
                 <select id="select-player" onchange="onPlayerChanged()">
                     <option value="Curry">Stephen Curry (GSW #30)</option>
@@ -515,22 +538,22 @@
 
             <div class="control-group">
                 <div class="control-label">
-                    <span>Lugar de Tiro Rápido:</span>
+                    <span data-i18n="sim.zone"></span>
                 </div>
                 <select id="select-shot-zone" onchange="onZoneSelectChanged()">
-                    <option value="top3">Triple Frontal (25 ft)</option>
-                    <option value="corner3_r">Triple Esquina Derecha (22 ft)</option>
-                    <option value="corner3_l">Triple Esquina Izquierda (22 ft)</option>
-                    <option value="wing3">Triple en 45° (24 ft)</option>
-                    <option value="midrange">Media Distancia (16 ft)</option>
-                    <option value="freethrow">Línea de Tiro Libre (15 ft)</option>
-                    <option value="paint">Floater en Pintura (8 ft)</option>
+                    <option value="top3" data-i18n="sim.z.top3"></option>
+                    <option value="corner3_r" data-i18n="sim.z.corner3_r"></option>
+                    <option value="corner3_l" data-i18n="sim.z.corner3_l"></option>
+                    <option value="wing3" data-i18n="sim.z.wing3"></option>
+                    <option value="midrange" data-i18n="sim.z.midrange"></option>
+                    <option value="freethrow" data-i18n="sim.z.freethrow"></option>
+                    <option value="paint" data-i18n="sim.z.paint"></option>
                 </select>
             </div>
 
             <div class="control-group">
                 <div class="control-label">
-                    <span>Minutos Continuos:</span>
+                    <span data-i18n="sim.stint"></span>
                     <span id="slider-stint-val" class="control-val">2.5 min</span>
                 </div>
                 <input type="range" id="slider-stint" min="0" max="12.0" step="0.5" value="2.5" oninput="onStintSliderChange(this.value)">
@@ -538,50 +561,50 @@
 
             <div class="control-group">
                 <div class="control-label">
-                    <span>Equipo rival (defensa):</span>
+                    <span data-i18n="sim.rival"></span>
                 </div>
                 <select id="select-rival" onchange="onRivalChanged()">
-                    <option value="">Promedio de la liga</option>
+                    <option value="" data-i18n="sim.rival.avg"></option>
                 </select>
             </div>
 
             <div class="control-group">
                 <div class="control-label">
-                    <span title="Rango con datos suficientes: 1.5 a 8 pies">Distancia del defensor:</span>
+                    <span data-i18n-title="sim.defdist.tip" data-i18n="sim.defdist"></span>
                     <span id="slider-def-val" class="control-val">4.0 ft</span>
                 </div>
                 <input type="range" id="slider-def" min="1.5" max="8" step="0.5" value="4" oninput="onDefenderChanged(this.value)">
-                <label class="chk" style="margin-top:6px;"><input type="checkbox" id="chk-typical" checked onchange="onTypicalToggled(this.checked)"><span>Usar la distancia típica del defensor para este tiro</span></label>
+                <label class="chk" style="margin-top:6px;"><input type="checkbox" id="chk-typical" checked onchange="onTypicalToggled(this.checked)"><span data-i18n="sim.typical.chk"></span></label>
             </div>
 
             <label class="chk"><input type="checkbox" id="chk-defenders" checked onchange="toggleDefenders(this.checked)">
-                <span>Mostrar defensas (las posiciones son ilustrativas; solo cuenta la distancia del defensor principal)</span></label>
+                <span data-i18n="sim.defs.chk"></span></label>
 
             <label class="chk"><input type="checkbox" id="chk-arc" checked onchange="updateArcPreview()">
-                <span>Mostrar la trayectoria prevista del balón (parábola)</span></label>
+                <span data-i18n="sim.arc.chk"></span></label>
 
             <button id="btn-shoot" class="btn-shoot" onclick="shootBall()">
-                <span>🏀</span> LANZAR TIRO
+                <svg class="ic" aria-hidden="true"><use href="#i-ball"/></svg> <span data-i18n="sim.shoot"></span>
             </button>
         </div>
     </div>
 
-    <!-- Panel de Métricas Predictivas Arrastrable y Minimizable (Derecha) -->
+    <!-- Draggable, collapsible metrics panel (right) -->
     <div class="floating-card" id="metrics-panel">
         <div class="card-header" id="metrics-drag-handle">
             <div class="card-title">
-                <span>📊</span> Predicción xShot
+                <svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg><span data-i18n="sim.pred"></span>
             </div>
-            <button class="card-btn-min" id="btn-min-metrics" onclick="toggleCard('metrics')" title="Minimizar / Expandir panel">−</button>
+            <button class="card-btn-min" id="btn-min-metrics" onclick="toggleCard('metrics')" data-i18n-title="sim.min.title">−</button>
         </div>
 
         <div class="card-body" id="metrics-body">
             <div class="metric-row">
-                <span style="color:#94A3B8;">Distancia al Aro:</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.dist"></span>
                 <span id="metric-distance" style="font-weight:700; color:#38BDF8;">25.0 ft</span>
             </div>
             <div class="metric-row">
-                <span style="color:#94A3B8;">Fatiga Muscular:</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.fatigue"></span>
                 <span id="metric-fatigue-pct" style="font-weight:700; color:#10B981;">20%</span>
             </div>
             <div class="gauge-bar-bg">
@@ -589,37 +612,37 @@
             </div>
 
             <div class="metric-row">
-                <span style="color:#94A3B8;">Acierto base del jugador:</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.base"></span>
                 <span id="metric-base-xshot" style="font-weight:700;">48.5%</span>
             </div>
             <div class="metric-row">
-                <span style="color:#94A3B8;">Distancia del tiro:</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.shotdist"></span>
                 <span id="metric-dist-adj" style="font-weight:700;">0.0 pp</span>
             </div>
             <div class="metric-row">
-                <span style="color:#94A3B8;">Defensor a <span id="metric-def-ft">4.0</span> ft <span id="metric-def-typ" class="ci"></span>:</span>
+                <span style="color:#94A3B8;"><span data-i18n="sim.m.def"></span> <span id="metric-def-ft">4.0</span> ft <span id="metric-def-typ" class="ci"></span>:</span>
                 <span><span id="metric-contest" style="font-weight:700;">0.0 pp</span><span id="metric-contest-ci" class="ci"></span></span>
             </div>
             <div class="metric-row">
-                <span style="color:#94A3B8;">Defensa del rival:</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.rival"></span>
                 <span><span id="metric-team" style="font-weight:700;">0.0 pp</span><span id="metric-team-ci" class="ci"></span></span>
             </div>
             <div class="metric-row">
-                <span style="color:#94A3B8;">Minutos seguidos (arranque frío / fatiga):</span>
+                <span style="color:#94A3B8;" data-i18n="sim.m.mins"></span>
                 <span id="metric-penalty" style="font-weight:700; color:#10B981;">0.0%</span>
             </div>
             <div class="metric-row">
-                <span style="color:#F8FAFC; font-weight:700;">Probabilidad Real:</span>
+                <span style="color:#F8FAFC; font-weight:700;" data-i18n="sim.m.final"></span>
                 <span id="metric-final-prob" style="font-family:'Orbitron', monospace; font-size:1.1rem; font-weight:900; color:#38BDF8;">48.5%</span>
             </div>
             <div id="def-note" style="font-size:.6rem; color:#94A3B8; margin-top:8px; line-height:1.4;"></div>
         </div>
     </div>
 
-    <!-- Lógica 3D en Three.js -->
+    <!-- 3D logic (Three.js) -->
     <script>
-        // Jugadores (colores, dorsales y estatura son ilustrativos). El % de acierto base se reemplaza al cargar
-        // con el real de la temporada (data/players.json); la fatiga viene del modelo poblacional (data/summary.json).
+        // Players (colours, numbers and height are illustrative). Base accuracy is replaced on load
+        // with the real season value (data/players.json); fatigue comes from the population model (data/summary.json).
         const PLAYERS_DATA = {
             Curry: {
                 name: "Stephen Curry", team: "GSW", number: "30",
@@ -659,11 +682,11 @@
             }
         };
 
-        // Modelo de fatiga: pendiente poblacional MEDIDA (pp de acierto por minuto seguido), no por jugador.
+        // Fatigue model: MEASURED population slope (accuracy pp per consecutive minute), not per player.
         const FATIGUE_MODEL = { central: 0.0, pessimistic: 0.0, scenario: 'central', loaded: false, mu_ci: null };
         function fatigueSlope() { return FATIGUE_MODEL[FATIGUE_MODEL.scenario]; }
         function fatigueDropFor(stintMin) {
-            // caída (en pp) respecto a 4 min seguidos; negativa si el modelo mide una mejora
+            // drop (pp) relative to 4 consecutive min; negative if the model measures an improvement
             return stintMin > 4.0 ? -fatigueSlope() * (stintMin - 4.0) : 0;
         }
         const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -673,10 +696,10 @@
                     fetch('../data/summary.json').then((r) => r.json()),
                     fetch('../data/players.json').then((r) => r.json())
                 ]);
-                // Fatiga = pendiente por minuto seguido DESPUÉS de calentar (desde los 2 min); el arranque frío va aparte
-                const warm = sum.robustness.find((r) => r.label.startsWith('Solo tras calentar'));
+                // Fatigue = slope per consecutive minute AFTER warm-up (from 2 min); the cold start is separate
+                const warm = sum.robustness.find((r) => r.label.startsWith('Warmed up only'));
                 FATIGUE_MODEL.central = warm.coef_pp;
-                // Escenario pesimista: límite inferior del IC 95% de esa pendiente (0 si el IC no baja de cero)
+                // Pessimistic scenario: lower bound of the 95% CI of that slope (0 if the CI does not go below zero)
                 FATIGUE_MODEL.pessimistic = Math.min(0, warm.lo_pp);
                 FATIGUE_MODEL.mu_ci = [warm.lo_pp, warm.hi_pp];
                 const cs = (lab) => (sum.cold_start.find((r) => r.label === lab) || {}).effect_pp || 0;
@@ -686,18 +709,22 @@
                     if (hit) { p.baseFg = hit.fg * 100; p.real = true; }
                 });
                 FATIGUE_MODEL.loaded = true;
-            } catch (e) { /* sin servidor local: se queda en 0 (sin efecto) */ }
+            } catch (e) { /* no local server: stays at 0 (no effect) */ }
             const sel = document.getElementById('fatigue-scenario');
             if (sel) sel.addEventListener('change', () => { FATIGUE_MODEL.scenario = sel.value; onStintSliderChange(document.getElementById('slider-stint').value); });
-            const note = document.getElementById('fatigue-note');
-            if (note) note.textContent = FATIGUE_MODEL.loaded
-                ? `Fatiga medida: ${fatigueSlope() >= 0 ? '+' : ''}${fatigueSlope().toFixed(3)} pp por minuto seguido tras calentar (NBA 2021-25; IC que incluye 0). Arranque frío medido aparte.`
-                : 'Sin datos cargados: abre desde un servidor local (python -m http.server) en la carpeta web/';
+            updateFatigueNote();
             onStintSliderChange(document.getElementById('slider-stint').value);
+        }
+        function updateFatigueNote() {
+            const note = document.getElementById('fatigue-note');
+            if (!note) return;
+            note.textContent = FATIGUE_MODEL.loaded
+                ? I18N.t('sim.fat.note', { x: (fatigueSlope() >= 0 ? '+' : '') + fatigueSlope().toFixed(3) })
+                : I18N.t('sim.nodata');
         }
 
 // <<DEFENSA
-        // Cada término del acierto sale de datos medidos (ver data/*.json). Nada se escribe a mano.
+        // Every accuracy term comes from measured data (see data/*.json). Nothing is hand-written.
         const FT = 0.3048;
         const DEF = { teams: [], team: null, contest: null, dist: null, season: null, mainDef: 4.0, cold: [], auto: true };
         const TEAM_COLORS = { Hawks: 0xE03A3E, Celtics: 0x007A33, Nets: 0x2B2B2B, Hornets: 0x1D1160, Bulls: 0xCE1141, Cavaliers: 0x860038,
@@ -709,7 +736,7 @@
             for (const k in TEAM_COLORS) { if (String(name).endsWith(k)) return TEAM_COLORS[k]; }
             return 0x64748B;
         }
-        // Posición fraccional dentro de una rejilla ordenada
+        // Fractional position inside a sorted grid
         function interpIdx(grid, x) {
             const n = grid.length;
             if (x <= grid[0]) return { i: 0, j: 0, t: 0 };
@@ -724,31 +751,31 @@
             const bot = table[a.j][b.i] * (1 - b.t) + table[a.j][b.j] * b.t;
             return top * (1 - a.t) + bot * a.t;
         }
-        // Acierto según la distancia del tiro, relativo al promedio de la liga (nuestras 4 temporadas)
+        // Accuracy by shot distance, relative to the league average (our 4 seasons)
         function distAdj(ft) {
             if (!DEF.dist) return 0;
             const a = DEF.dist.adj_pp, x = Math.max(0, Math.min(40, ft)), i = Math.floor(x), t = x - i;
             return a[i] * (1 - t) + a[Math.min(40, i + 1)] * t;
         }
-        // Distancia TÍPICA del defensor para una distancia de tiro (mediana en 2014-15): el ajuste del defensor es 0 ahí
+        // TYPICAL defender distance for a shot distance (2014-15 median): the defender adjustment is 0 there
         function typicalDef(shotFt) {
             const c = DEF.contest;
             if (!c || !c.ref_def_by_shot_ft) return 4.0;
             const a = interpIdx(c.shot_grid_ft, shotFt), r = c.ref_def_by_shot_ft;
             return r[a.i] * (1 - a.t) + r[a.j] * a.t;
         }
-        // Efecto de la distancia al defensor más cercano, relativo a la distancia típica de ese tipo de tiro (datos NBA 2014-15)
+        // Effect of the nearest defender's distance, relative to the typical distance for that shot type (NBA 2014-15 data)
         function contestAdj(shotFt, defFt) {
             const c = DEF.contest;
             if (!c) return { adj: 0, lo: 0, hi: 0 };
             const f = (tab) => bilinear(tab, c.shot_grid_ft, c.def_grid_ft, shotFt, defFt);
             return { adj: f(c.adj_pp), lo: f(c.adj_lo_pp), hi: f(c.adj_hi_pp) };
         }
-        // Efecto defensivo medio del equipo rival (temporada más reciente, suavizado)
+        // Average defensive effect of the rival team (latest season, shrunk)
         function teamAdj() {
             return DEF.team ? { adj: DEF.team.effect_pp, lo: DEF.team.lo_pp, hi: DEF.team.hi_pp } : { adj: 0, lo: 0, hi: 0 };
         }
-        // Arranque frío: acierto relativo al normal del jugador según el tiempo desde que entró (medido)
+        // Cold start: accuracy relative to the player's normal by time since entering (measured)
         function coldAdj(stintMin) {
             for (const b of DEF.cold) { if (stintMin < b.hi) return b.eff; }
             return 0;
@@ -765,7 +792,7 @@
             return { final, base: pData.baseFg, da, ca, ta, cold, fatigueDrop, distFeet, typ: typicalDef(distFeet) };
         }
 
-        // ----- Defensores 3D (posiciones ilustrativas; solo el principal tiene efecto vía su distancia) -----
+        // ----- 3D defenders (illustrative positions; only the main one has an effect through its distance) -----
         let defendersGroup = null;
         function makeDefender(jerseyHex, alpha) {
             const g = new THREE.Group();
@@ -776,7 +803,7 @@
                 leg.position.set(s * 0.11, 0.46, 0); leg.castShadow = true; g.add(leg);
                 const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.26), shoes);
                 shoe.position.set(s * 0.11, 0.04, 0.04); g.add(shoe);
-                const arm = new THREE.Group();                       // brazos en alto: postura defensiva
+                const arm = new THREE.Group();                       // arms up: defensive stance
                 arm.position.set(s * 0.27, 1.55, 0);
                 const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.62, 10), skin);
                 seg.position.y = 0.31; arm.add(seg);
@@ -810,7 +837,7 @@
             if (sl) sl.value = DEF.mainDef;
             if (lb) lb.textContent = `${DEF.mainDef.toFixed(1)} ft`;
         }
-        const DEF_SHADE = 0.38;   // el defensor se desplaza ~22° de la línea tirador-aro, como defienden en la práctica
+        const DEF_SHADE = 0.38;   // the defender shifts ~22° off the shooter-hoop line, as in real defense
         function placeDefenders() {
             if (!defendersGroup) return;
             syncTypicalDefender();
@@ -818,9 +845,9 @@
             let vx = HOOP_X - sx, vz = HOOP_Z - sz;
             const dist = Math.hypot(vx, vz) || 1;
             vx /= dist; vz /= dist;
-            const d = Math.min(DEF.mainDef * FT, Math.max(0.46, dist - 0.3));   // distancia centro a centro, nunca atravesando el aro
+            const d = Math.min(DEF.mainDef * FT, Math.max(0.46, dist - 0.3));   // center-to-center distance, never crossing the hoop
             const c = Math.cos(DEF_SHADE), sn = Math.sin(DEF_SHADE);
-            const ux = vx * c - vz * sn, uz = vx * sn + vz * c;                 // dirección girada
+            const ux = vx * c - vz * sn, uz = vx * sn + vz * c;                 // rotated direction
             const main = defendersGroup.children[0];
             main.position.set(sx + ux * d, 0, sz + uz * d);
             main.lookAt(sx, 0, sz);
@@ -838,7 +865,7 @@
             updatePredictiveStats();
         }
         function onDefenderChanged(v) {
-            DEF.auto = false;                                   // el usuario fija la distancia
+            DEF.auto = false;                                   // the user sets the distance
             const chk = document.getElementById('chk-typical'); if (chk) chk.checked = false;
             DEF.mainDef = parseFloat(v);
             document.getElementById('slider-def-val').textContent = `${DEF.mainDef.toFixed(1)} ft`;
@@ -863,19 +890,22 @@
                 d.teams.slice().sort((a, b) => a.team.localeCompare(b.team)).forEach((t) => {
                     const o = document.createElement('option'); o.value = t.team_id; o.textContent = t.team; sel.appendChild(o);
                 });
-            } catch (e) { /* sin datos de defensa: los ajustes quedan en 0 */ }
-            if (typeof placeDefenders === 'function') placeDefenders();     // aplica la distancia típica ya con los datos cargados
+            } catch (e) { /* no defense data: adjustments stay at 0 */ }
+            if (typeof placeDefenders === 'function') placeDefenders();     // apply the typical distance now that the data is loaded
             if (typeof updateArcPreview === 'function') updateArcPreview();
-            const f = (v) => (v >= 0 ? '+' : '') + v.toFixed(1);
-            const note = document.getElementById('def-note');
-            if (note) note.textContent = DEF.contest
-                ? `Defensor: relación medida en 2014-15 (otra época), relativa a la distancia típica de ese tipo de tiro. Rival: efecto promedio del equipo en ${DEF.season}, no de un defensor sobre un tiro concreto. Distancia del tiro: promedio 2021-25.`
-                : 'Sin datos de defensa cargados: abre desde un servidor local en la carpeta web/.';
+            updateDefNote();
             updatePredictiveStats();
+        }
+        function updateDefNote() {
+            const note = document.getElementById('def-note');
+            if (!note) return;
+            note.textContent = DEF.contest
+                ? I18N.t('sim.def.note', { s: `${DEF.season}-${String(+DEF.season + 1).slice(2)}` })
+                : I18N.t('sim.def.nodata');
         }
         // DEFENSA>>
 
-        // Zonas predefinidas de tiro
+        // Predefined shot spots
         const SHOT_ZONES = {
             top3: { x: 0, z: 2.2 },
             corner3_r: { x: 6.2, z: -5.0 },
@@ -893,21 +923,21 @@
         let isShooting = false;
         let cameraModeIndex = 0;
 
-        // Coordenadas Reglamentarias del Aro NBA (en metros)
+        // Official NBA hoop coordinates (meters)
         const HOOP_X = 0;
-        const HOOP_Y = 3.05; // 10 pies
+        const HOOP_Y = 3.05; // 10 ft
         const HOOP_Z = -5.5; 
         const RIM_RADIUS = 0.23;
 
-        // Posición actual del tirador (en metros)
+        // Current shooter position (meters)
         let currentShooterPos = { x: 0, z: 2.2 };
         let activePlayerKey = "Curry";
 
-        // Referencias para articulaciones y animación
+        // References for joints and animation
         let bodyGroup, rightArm, leftArm, rightLeg, leftLeg, headMesh, jerseyMesh, shortsMesh;
         let ballInHands = true;
 
-        // 1. Inicialización de la Escena
+        // 1. Scene initialisation
         function initScene() {
             const canvas = document.getElementById('webgl-canvas');
             scene = new THREE.Scene();
@@ -940,7 +970,7 @@
             initArcObjects();
             buildDefenders();
 
-            // Interacción: Clic en la cancha para posicionar al jugador
+            // Interaction: click on the court to place the player
             initCourtRaycasting();
             initDraggableCards();
 
@@ -950,7 +980,7 @@
             applySideCamera(0);
         }
 
-        // Iluminación
+        // Lighting
         function setupLights() {
             const ambient = new THREE.AmbientLight(0xffffff, 0.65);
             scene.add(ambient);
@@ -971,7 +1001,7 @@
             scene.add(stadiumLight2);
         }
 
-        // Cancha de Madera
+        // Wooden court
         function createBasketballCourt() {
             const canvas = document.createElement('canvas');
             canvas.width = 512;
@@ -1012,14 +1042,14 @@
             const lineMat = new THREE.LineBasicMaterial({ color: 0xFFFFFF, linewidth: 2 });
             const paintMat = new THREE.MeshBasicMaterial({ color: 0x1E3A8A, opacity: 0.7, transparent: true });
 
-            // Zona Pintada
+            // Painted area
             const paintGeo = new THREE.PlaneGeometry(4.8, 5.8);
             const paint = new THREE.Mesh(paintGeo, paintMat);
             paint.rotation.x = -Math.PI / 2;
             paint.position.set(0, 0.005, -3.9);
             scene.add(paint);
 
-            // Línea de 3 puntos
+            // Three-point line
             const points3pt = [];
             const radius3pt = 6.8;
             for (let i = 0; i <= 64; i++) {
@@ -1035,7 +1065,7 @@
             scene.add(line3pt);
         }
 
-        // Anillo indicador en el suelo donde está posicionado el jugador
+        // Floor ring marking where the player stands
         function createTargetRing() {
             const ringGeo = new THREE.RingGeometry(0.35, 0.45, 32);
             const ringMat = new THREE.MeshBasicMaterial({ color: 0x38BDF8, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
@@ -1045,7 +1075,7 @@
             scene.add(targetRingMesh);
         }
 
-        // Tablero y Aro
+        // Backboard and hoop
         function createHoop() {
             const hoopGroup = new THREE.Group();
 
@@ -1103,19 +1133,19 @@
         }
 
         // =========================================================================
-        // 2. MODELADO MEJORADO DEL JUGADOR (ESQUELETO ARTICULADO, UNIFORME, DORSAL)
+        // 2. PLAYER MODEL (ARTICULATED SKELETON, UNIFORM, NUMBER)
         // =========================================================================
 
-        // Medidas del esqueleto en metros (antes de escalar por estatura)
+        // Skeleton measures in meters (before scaling by height)
         const UPPER_ARM = 0.30, FOREARM = 0.27, THIGH = 0.45, SHIN = 0.45;
         const HIP_Y = 0.95, SHOULDER_Y = 1.58, ANKLE_Y = 0.1;
         const IDLE_CROUCH = 0.04;
 
-        // Balón en coordenadas locales del jugador (+Z mira hacia el aro)
-        const BALL_HOLD = new THREE.Vector3(0.1, 1.25, 0.32);      // Triple amenaza
-        const BALL_SET_POINT = new THREE.Vector3(0.1, 2.02, 0.3);  // Armado sobre el ojo derecho
+        // Ball in the player's local coordinates (+Z faces the hoop)
+        const BALL_HOLD = new THREE.Vector3(0.1, 1.25, 0.32);      // Triple threat
+        const BALL_SET_POINT = new THREE.Vector3(0.1, 2.02, 0.3);  // Set above the right eye
 
-        // Posición de cada muñeca respecto al balón y dirección hacia donde apunta el codo
+        // Wrist position relative to the ball and the direction the elbow points
         const RIGHT_HAND_HOLD = new THREE.Vector3(0.1, 0.0, -0.08);
         const RIGHT_HAND_SET = new THREE.Vector3(0.0, -0.15, -0.05);
         const LEFT_HAND_HOLD = new THREE.Vector3(-0.13, 0.02, -0.02);
@@ -1129,9 +1159,9 @@
 
         const hexColor = (c) => '#' + c.toString(16).padStart(6, '0');
 
-        // Textura de camiseta sin mangas. En un CylinderGeometry u=0 es el frente (+Z)
-        // y u=0.5 la espalda, así que el dorsal grande va al centro del canvas y el
-        // frontal se dibuja partido en ambos bordes para que se una en la costura.
+        // Sleeveless jersey texture. On a CylinderGeometry u=0 is the front (+Z)
+        // and u=0.5 the back, so the large number goes at the canvas centre and the
+        // front one is drawn split across both edges so it joins at the seam.
         function createJerseyTexture(pData) {
             const canvas = document.createElement('canvas');
             canvas.width = 512;
@@ -1142,7 +1172,7 @@
             ctx.fillStyle = hexColor(pData.jerseyColor);
             ctx.fillRect(0, 0, 512, 256);
 
-            // Ribete de cuello/sisas, bajo de la camiseta y paneles laterales
+            // Neck/armhole trim, jersey hem and side panels
             ctx.fillStyle = trim;
             ctx.fillRect(0, 0, 512, 10);
             ctx.fillRect(0, 244, 512, 12);
@@ -1153,7 +1183,7 @@
             ctx.lineWidth = 5;
             ctx.strokeStyle = '#FFFFFF';
 
-            // Espalda: apellido + dorsal grande
+            // Back: surname + large number
             const lastName = pData.name.split(' ').slice(-1)[0].toUpperCase();
             ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 30px Outfit, sans-serif';
@@ -1163,7 +1193,7 @@
             ctx.strokeText(pData.number, 256, 190);
             ctx.fillText(pData.number, 256, 190);
 
-            // Frente: franquicia + dorsal mediano
+            // Front: franchise + medium number
             [0, 512].forEach(x => {
                 ctx.fillStyle = '#FFFFFF';
                 ctx.font = 'bold 34px Outfit, sans-serif';
@@ -1179,7 +1209,7 @@
             return texture;
         }
 
-        // Segmento cilíndrico que cuelga hacia -Y desde su articulación
+        // Cylindrical segment hanging toward -Y from its joint
         function makeSegment(rTop, rBottom, length, mat) {
             const geo = new THREE.CylinderGeometry(rTop, rBottom, length, 14);
             geo.translate(0, -length / 2, 0);
@@ -1188,7 +1218,7 @@
             return mesh;
         }
 
-        // Extremidad de dos huesos: root (hombro/cadera) -> mid (codo/rodilla) -> end (muñeca/tobillo)
+        // Two-bone limb: root (shoulder/hip) -> mid (elbow/knee) -> end (wrist/ankle)
         function makeLimb(parent, origin, len1, len2) {
             const root = new THREE.Group();
             root.position.copy(origin);
@@ -1202,8 +1232,8 @@
             return { root, mid, end, len1, len2 };
         }
 
-        // IK analítico de dos huesos: lleva el extremo a `target` (coordenadas del padre)
-        // doblando la articulación media hacia `pole`.
+        // Analytic two-bone IK: brings the end to `target` (parent coordinates)
+        // bending the middle joint toward `pole`.
         function solveLimb(limb, target, pole) {
             const toTarget = target.clone().sub(limb.root.position);
             const dist = THREE.MathUtils.clamp(toTarget.length(), 0.05, limb.len1 + limb.len2 - 0.001);
@@ -1228,7 +1258,7 @@
 
             const pData = PLAYERS_DATA[activePlayerKey];
             playerGroup = new THREE.Group();
-            // Todo lo que está de la cadera hacia arriba baja junto al flexionar rodillas
+            // Everything from the hip up goes down together when the knees bend
             bodyGroup = new THREE.Group();
             playerGroup.add(bodyGroup);
 
@@ -1241,7 +1271,7 @@
             const socksMat = new THREE.MeshStandardMaterial({ color: 0xF1F5F9, roughness: 0.85 });
             const jerseyMat = new THREE.MeshStandardMaterial({ map: createJerseyTexture(pData), roughness: 0.55 });
 
-            // 1. Cabeza, cuello, pelo, orejas y nariz (la nariz marca hacia dónde mira)
+            // 1. Head, neck, hair, ears and nose (the nose shows where it faces)
             const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.12, 14), skinMat);
             neck.position.y = 1.68;
             bodyGroup.add(neck);
@@ -1269,14 +1299,14 @@
             nose.position.set(0, 1.815, 0.112);
             bodyGroup.add(nose);
 
-            // 2. Torso: camiseta sin mangas aplanada de adelante hacia atrás
+            // 2. Torso: sleeveless jersey flattened front to back
             jerseyMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.2, 0.56, 28), jerseyMat);
             jerseyMesh.scale.z = 0.62;
             jerseyMesh.position.y = 1.36;
             jerseyMesh.castShadow = true;
             bodyGroup.add(jerseyMesh);
 
-            // 3. Cintura del pantalón con elástico del color de acento
+            // 3. Waistband in the accent colour
             shortsMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.215, 0.2, 24), shortsMat);
             shortsMesh.scale.z = 0.7;
             shortsMesh.position.y = 1.0;
@@ -1288,7 +1318,7 @@
             waistband.position.y = 1.085;
             bodyGroup.add(waistband);
 
-            // 4. Piernas: pantalón holgado hasta la rodilla, calcetín alto y zapatilla de caña alta
+            // 4. Legs: baggy knee-length shorts, high sock and high-top sneaker
             const buildLeg = (side) => {
                 const leg = makeLimb(bodyGroup, new THREE.Vector3(side * 0.11, HIP_Y, 0), THIGH, SHIN);
 
@@ -1319,7 +1349,7 @@
             rightLeg = buildLeg(1);
             leftLeg = buildLeg(-1);
 
-            // 5. Brazos: deltoides, codo, muñequera en el brazo tirador y mano
+            // 5. Arms: deltoid, elbow, wristband on the shooting arm and hand
             const buildArm = (side) => {
                 const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 14), skinMat);
                 shoulder.position.set(side * 0.25, SHOULDER_Y + 0.02, 0);
@@ -1343,7 +1373,7 @@
             rightArm = buildArm(1);
             leftArm = buildArm(-1);
 
-            // Escala según la altura real del jugador
+            // Scale by the player's real height
             playerGroup.scale.set(pData.heightScale, pData.heightScale, pData.heightScale);
 
             posePlayer(IDLE_CROUCH, 0);
@@ -1351,23 +1381,23 @@
             scene.add(playerGroup);
         }
 
-        // Postura completa del jugador.
-        //   crouch: cuánto baja la cadera (los pies se quedan apoyados en el suelo)
-        //   lift:   0 = balón en triple amenaza, 1 = balón en el punto de armado del tiro
-        // Mientras el balón está en sus manos lo coloca; tras soltarlo hace el seguimiento.
+        // Full player pose.
+        //   crouch: how far the hip drops (feet stay on the floor)
+        //   lift:   0 = ball in triple threat, 1 = ball at the shot set point
+        // While the ball is in the hands it places it; after release it does the follow-through.
         function posePlayer(crouch = IDLE_CROUCH, lift = 0) {
             bodyGroup.position.y = -crouch;
 
             [rightLeg, leftLeg].forEach(leg => {
                 const ankle = new THREE.Vector3(leg.root.position.x * 1.15, ANKLE_Y + crouch, 0.02);
                 solveLimb(leg, ankle, KNEE_POLE);
-                // La zapatilla queda plana sobre el suelo aunque la espinilla se incline
+                // The sneaker stays flat on the floor even when the shin tilts
                 leg.end.quaternion.copy(leg.root.quaternion).multiply(leg.mid.quaternion).invert();
             });
 
             if (ballInHands) {
-                // El balón sube y baja junto con el cuerpo, así que en coordenadas
-                // del cuerpo no depende de crouch
+                // The ball moves up and down with the body, so in body coordinates
+                // it does not depend on crouch
                 const ball = BALL_HOLD.clone().lerp(BALL_SET_POINT, lift);
                 const target = ball.clone();
                 solveLimb(rightArm, target.clone().add(RIGHT_HAND_HOLD.clone().lerp(RIGHT_HAND_SET, lift)),
@@ -1381,13 +1411,13 @@
                     basketball.position.copy(playerGroup.localToWorld(ball));
                 }
             } else {
-                // Seguimiento: brazo tirador estirado hacia el aro, mano guía abierta al lado
+                // Follow-through: shooting arm extended toward the hoop, guide hand open at the side
                 solveLimb(rightArm, new THREE.Vector3(0.12, SHOULDER_Y + 0.55, 0.34), ELBOW_POLE_R_SET);
                 solveLimb(leftArm, new THREE.Vector3(-0.3, SHOULDER_Y + 0.3, 0.3), ELBOW_POLE_L_SET);
             }
         }
 
-        // Balón de Baloncesto
+        // Basketball
         function createBasketball() {
             const ballGeo = new THREE.SphereGeometry(0.12, 24, 24);
             const ballMat = new THREE.MeshStandardMaterial({ color: 0xEA580C, roughness: 0.5, metalness: 0.1 });
@@ -1404,14 +1434,14 @@
         }
 
         // =========================================================================
-        // 3. SELECCIÓN LIBRE DEL LUGAR DE TIRO (RAYCASTING AL HACER CLIC EN CANCHA)
+        // 3. FREE CHOICE OF SHOT SPOT (RAYCASTING ON COURT CLICK)
         // =========================================================================
         function initCourtRaycasting() {
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
 
             window.addEventListener('pointerdown', (e) => {
-                // Si el clic fue en un panel o botón, no mover al jugador
+                // If the click was on a panel or button, do not move the player
                 if (e.target.closest('.floating-card') || e.target.closest('.camera-tools') || e.target.closest('.hud-header')) {
                     return;
                 }
@@ -1426,7 +1456,7 @@
 
                 if (intersects.length > 0) {
                     const pt = intersects[0].point;
-                    // Limitar dentro de la media cancha jugable
+                    // Clamp inside the playable half court
                     const clampedX = Math.max(-6.8, Math.min(6.8, pt.x));
                     const clampedZ = Math.max(-5.8, Math.min(6.0, pt.z));
 
@@ -1440,14 +1470,14 @@
             playerGroup.position.set(x, 0, z);
             playerGroup.lookAt(HOOP_X, 0, HOOP_Z);
 
-            // Mover anillo indicador
+            // Move the indicator ring
             targetRingMesh.position.set(x, 0.02, z);
 
             resetBallToPlayerHands();
             placeDefenders();
             updateArcPreview();
 
-            // Calcular distancia al aro en pies (1m ≈ 3.28084 ft)
+            // Distance to the hoop in feet (1 m ≈ 3.28084 ft)
             const dx = x - HOOP_X;
             const dz = z - HOOP_Z;
             const distMeters = Math.sqrt(dx * dx + dz * dz);
@@ -1512,17 +1542,17 @@
             }
         }
 
-        // Simulación y Animación Completa del Tiro
+        // Full shot simulation and animation
         // <<TRAYECTORIA
-        // Trayectoria física: parábola de un proyectil lanzado desde la mano hasta el aro.
-        // Dado el punto de suelta, el aro y el ángulo de salida, la velocidad inicial sale de las ecuaciones del movimiento
-        // (no hay una "altura de arco" escrita a mano ni depende del cansancio).
+        // Physical trajectory: parabola of a projectile thrown from the hand to the hoop.
+        // Given the release point, the hoop and the launch angle, the initial speed comes from the equations of motion
+        // (there is no hand-written "arc height" and it does not depend on fatigue).
         const G_ACC = 9.81;
-        const FLIGHT_SLOWMO = 1.15;          // reproducción 15% más lenta que la real para poder seguir la parábola
+        const FLIGHT_SLOWMO = 1.15;          // playback 15% slower than real so the parabola can be followed
         function launchModel(start, target) {
             const dxh = target.x - start.x, dzh = target.z - start.z;
             const D = Math.hypot(dxh, dzh) || 0.01, dy = target.y - start.y;
-            // ángulo de salida: más alto en tiros cercanos (floaters) y ~47° en tiros lejanos
+            // launch angle: higher on close shots (floaters), ~47° on long shots
             let th = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(60 - D * 1.6, 46, 62));
             const denomAt = (a) => 2 * Math.cos(a) ** 2 * (D * Math.tan(a) - dy);
             let denom = denomAt(th);
@@ -1566,7 +1596,7 @@
             arcPreview.visible = true; arcDots.visible = true;
         }
         function hideArcPreview() { if (arcPreview) { arcPreview.visible = false; arcDots.visible = false; } }
-        // La estela se construye muestreando el modelo físico hasta el instante actual (no depende de la tasa de fotogramas)
+        // The trail is built by sampling the physical model up to the current instant (independent of frame rate)
         function updateTrail(model, t, pos) {
             if (!trailLine) return;
             const pts = [];
@@ -1580,15 +1610,15 @@
         // TRAYECTORIA>>
 
         // <<CAMARA
-        // Cámara de transmisión: perpendicular al plano del tiro, de modo que la parábola se vea de perfil.
-        // (Desde detrás del tirador el balón sube y baja en el mismo plano que la cámara y parece una línea vertical.)
+        // Broadcast camera: perpendicular to the shot plane so the parabola is seen from the side.
+        // (From behind the shooter the ball rises and falls in the camera's plane and looks like a vertical line.)
         function sideCameraPose() {
             const sx = currentShooterPos.x, sz = currentShooterPos.z;
             const mx = (sx + HOOP_X) / 2, mz = (sz + HOOP_Z) / 2;
             let nx = -(HOOP_Z - sz), nz = (HOOP_X - sx);
             const len = Math.hypot(nx, nz) || 1;
             nx /= len; nz /= len;
-            if (nx < 0 || (Math.abs(nx) < 1e-6 && nz < 0)) { nx = -nx; nz = -nz; }   // siempre el mismo lado, para no saltar
+            if (nx < 0 || (Math.abs(nx) < 1e-6 && nz < 0)) { nx = -nx; nz = -nz; }   // always the same side, to avoid jumping
             const span = Math.hypot(HOOP_X - sx, HOOP_Z - sz);
             const dist = Math.max(10, span * 1.15 + 4.2);
             return { pos: new THREE.Vector3(mx + nx * dist, 4.6, mz + nz * dist), target: new THREE.Vector3(mx, 2.9, mz) };
@@ -1597,7 +1627,7 @@
         function moveCameraTo(pos, target, ms) {
             const id = ++camAnimId, p0 = camera.position.clone(), t0 = controls.target.clone(), start = performance.now();
             (function step() {
-                if (id !== camAnimId) return;                       // otra animación de cámara tomó el control
+                if (id !== camAnimId) return;                       // another camera animation took over
                 const k = Math.min((performance.now() - start) / ms, 1), e = k * k * (3 - 2 * k);
                 camera.position.lerpVectors(p0, pos, e);
                 controls.target.lerpVectors(t0, target, e);
@@ -1617,19 +1647,19 @@
 
             const stintMin = parseFloat(document.getElementById('slider-stint').value);
             const pData = PLAYERS_DATA[activePlayerKey];
-            if (cameraModeIndex === 0) applySideCamera(450);   // vista TV: la parábola se ve de perfil
+            if (cameraModeIndex === 0) applySideCamera(450);   // TV view: the parabola is seen from the side
 
-            // Distancia en metros y pies
+            // Distance in meters and feet
             const dx = currentShooterPos.x - HOOP_X;
             const dz = currentShooterPos.z - HOOP_Z;
             const distMeters = Math.sqrt(dx * dx + dz * dz);
             const distFeet = distMeters * 3.28084;
 
-            // Probabilidad con el mismo modelo del panel (efectos medidos)
+            // Probability with the same model as the panel (measured effects)
             const finalProb = computeShotProb().final;
             const isMade = (Math.random() * 100) < finalProb;
 
-            // 1. Animación del Jugador: Flexión de rodillas subiendo el balón -> Salto -> Suelta y seguimiento
+            // 1. Player animation: knee bend raising the ball -> jump -> release and follow-through
             playSound('jump');
             let jumpStep = 0;
             const pHeight = pData.heightScale;
@@ -1637,11 +1667,11 @@
             const jumpInterval = setInterval(() => {
                 jumpStep += 0.07;
                 if (jumpStep <= 0.4) {
-                    // Carga previa (knee dip) mientras el balón sube al punto de armado
+                    // Pre-load (knee dip) while the ball rises to the set point
                     const t = jumpStep / 0.4;
                     posePlayer(IDLE_CROUCH + Math.sin(t * Math.PI) * 0.16, t);
                 } else if (jumpStep <= 1.0) {
-                    // Elevación en el aire (Jump shot); al soltar, posePlayer hace el seguimiento
+                    // Lift in the air (jump shot); on release, posePlayer does the follow-through
                     playerGroup.position.y = Math.sin((jumpStep - 0.4) * Math.PI / 0.6) * 0.55 * pHeight;
                     posePlayer(0, 1);
                 } else {
@@ -1651,7 +1681,7 @@
                 }
             }, 25);
 
-            // 2. Trayectoria del Balón (Parábola 3D dinámica desde las manos en el momento de soltar)
+            // 2. Ball trajectory (dynamic 3D parabola from the hands at release)
             let startPos;
             let targetPos;
 
@@ -1661,7 +1691,7 @@
                 targetPos = new THREE.Vector3(HOOP_X, HOOP_Y + 0.02, HOOP_Z + RIM_RADIUS);
             }
 
-            // Vuelo: parábola física hasta el aro (ver launchModel). La estela se dibuja mientras el balón avanza.
+            // Flight: physical parabola to the hoop (see launchModel). The trail is drawn as the ball advances.
             let model = null, flightStart = 0;
 
             function animateFlight() {
@@ -1678,7 +1708,7 @@
                 }
             }
 
-            // Iniciar vuelo del balón en el punto culminante del salto
+            // Start the ball flight at the top of the jump
             setTimeout(() => {
                 ballInHands = false;
                 startPos = basketball.position.clone();
@@ -1695,7 +1725,7 @@
             if (isMade) {
                 playSound('swish');
                 banner.className = 'made';
-                banner.textContent = '¡CANASTA LIMPIA! (SWISH)';
+                banner.textContent = I18N.t('sim.made');
 
                 let netTime = 0;
                 const netInterval = setInterval(() => {
@@ -1712,7 +1742,7 @@
             } else {
                 playSound('clank');
                 banner.className = 'missed';
-                banner.textContent = '¡FALLO! (GOLPE EN EL ARO)';
+                banner.textContent = I18N.t('sim.missed');
 
                 const bounceTarget = new THREE.Vector3(
                     HOOP_X + (Math.random() - 0.5) * 1.5,
@@ -1758,7 +1788,7 @@
             }, 25);
         }
 
-        // Paneles Arrastrables y Minimizables
+        // Draggable, collapsible panels
         function toggleCard(cardName) {
             const body = document.getElementById(`${cardName}-body`);
             const btn = document.getElementById(`btn-min-${cardName}`);
@@ -1835,7 +1865,7 @@
             }
         }
 
-        // HUD y Métricas
+        // HUD and metrics
         function onStintSliderChange(val) {
             const stintMin = parseFloat(val);
             document.getElementById('slider-stint-val').textContent = `${stintMin.toFixed(1)} min`;
@@ -1855,19 +1885,19 @@
             if (stintMin < 4.0) {
                 clockEl.classList.remove('warning', 'critical');
                 statusEl.classList.remove('warning', 'critical');
-                statusEl.textContent = "DESCANSADO";
+                statusEl.textContent = I18N.t('sim.st.rested');
                 deltaEl.textContent = "0.0 pp (base)";
                 deltaEl.style.color = "#10B981";
             } else if (stintMin < 8.0) {
                 clockEl.classList.add('warning');
                 statusEl.classList.add('warning');
-                statusEl.textContent = "CARGA MEDIA";
+                statusEl.textContent = I18N.t('sim.st.mid');
                 deltaEl.textContent = `${(-fatigueDropFor(stintMin)).toFixed(2)} pp`;
                 deltaEl.style.color = "#F59E0B";
             } else {
                 clockEl.classList.add('critical');
                 statusEl.classList.add('critical');
-                statusEl.textContent = "TRAMO LARGO";
+                statusEl.textContent = I18N.t('sim.st.long');
                 deltaEl.textContent = `${(-fatigueDropFor(stintMin)).toFixed(2)} pp`;
                 deltaEl.style.color = "#EF4444";
             }
@@ -1882,11 +1912,11 @@
             document.getElementById('metric-base-xshot').textContent = `${m.base.toFixed(1)}%`;
             document.getElementById('metric-dist-adj').textContent = `${f(m.da)} pp`;
             document.getElementById('metric-def-ft').textContent = DEF.mainDef.toFixed(1);
-            const typEl = document.getElementById('metric-def-typ'); if (typEl) typEl.textContent = DEF.contest ? `(típico ${m.typ.toFixed(1)})` : '';
+            const typEl = document.getElementById('metric-def-typ'); if (typEl) typEl.textContent = DEF.contest ? I18N.t('sim.typical', { x: m.typ.toFixed(1) }) : '';
             document.getElementById('metric-contest').textContent = `${f(m.ca.adj)} pp`;
-            document.getElementById('metric-contest-ci').textContent = DEF.contest ? `(${f(m.ca.lo)} a ${f(m.ca.hi)})` : '';
+            document.getElementById('metric-contest-ci').textContent = DEF.contest ? `(${f(m.ca.lo)} ${I18N.t('sim.to')} ${f(m.ca.hi)})` : '';
             document.getElementById('metric-team').textContent = DEF.team ? `${f(m.ta.adj)} pp` : '0.0 pp';
-            document.getElementById('metric-team-ci').textContent = DEF.team ? `(${f(m.ta.lo)} a ${f(m.ta.hi)})` : '(liga)';
+            document.getElementById('metric-team-ci').textContent = DEF.team ? `(${f(m.ta.lo)} ${I18N.t('sim.to')} ${f(m.ta.hi)})` : I18N.t('sim.league');
             const minsEffect = m.cold - m.fatigueDrop;
             document.getElementById('metric-penalty').textContent = `${f(minsEffect)} pp`;
             const hud = document.getElementById('hud-delta');
@@ -1909,24 +1939,25 @@
             onStintSliderChange(1.0);
         }
 
+        const CAM_KEYS = ['sim.cam.tv', 'sim.cam.shooter', 'sim.cam.rim', 'sim.cam.free'];
+        function updateCameraLabel() {
+            const btn = document.getElementById('btn-camera');
+            if (btn) btn.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg> ' + I18N.t(CAM_KEYS[cameraModeIndex]);
+        }
         function cycleCamera() {
             cameraModeIndex = (cameraModeIndex + 1) % 4;
-            const btn = document.getElementById('btn-camera');
+            updateCameraLabel();
 
             if (cameraModeIndex === 0) {
-                btn.textContent = "🎥 Vista: TV";
                 applySideCamera(450);
             } else if (cameraModeIndex === 1) {
-                btn.textContent = "🎥 Vista: Tirador";
                 const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(playerGroup.quaternion);
                 camera.position.copy(playerGroup.position).add(new THREE.Vector3(0, 2.2, 0)).sub(forward.multiplyScalar(2.6));
                 controls.target.set(HOOP_X, HOOP_Y, HOOP_Z);
             } else if (cameraModeIndex === 2) {
-                btn.textContent = "🎥 Vista: Sobre Aro";
                 camera.position.set(0, 4.8, -4.2);
                 controls.target.set(HOOP_X, HOOP_Y, HOOP_Z);
             } else {
-                btn.textContent = "🎥 Vista: 360° Libre";
             }
         }
 
@@ -1943,9 +1974,16 @@
         }
 
         window.onload = () => {
+            I18N.apply();
             initScene();
             animate();
+            updateCameraLabel();
             onStintSliderChange(2.5);
+            document.querySelectorAll('#lang-switch button').forEach((b) => b.addEventListener('click', () => I18N.set(b.dataset.lang)));
+            I18N.onChange(() => {
+                updateFatigueNote(); updateDefNote(); updateCameraLabel();
+                onStintSliderChange(document.getElementById('slider-stint').value);
+            });
         };
         loadRealData();
         loadDefenseData();

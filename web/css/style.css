@@ -1,5 +1,5 @@
 :root {
-  /* Paleta AQX Analytics Hackathon: azul marino + azul acero + blanco (Devpost aporta el cian) */
+  /* AQX Analytics Hackathon palette: navy + steel blue + white (Devpost supplies the cyan) */
   --bg: #010f2e;
   --bg-2: #031640;
   --card: #071b45;
@@ -36,7 +36,7 @@ body {
 h1, h2, h3 { font-family: "Barlow Condensed", Inter, sans-serif; letter-spacing: .01em; margin: 0; }
 h3 { font-size: 1.35rem; font-weight: 700; }
 
-/* ---------- barra superior ---------- */
+/* ---------- top bar ---------- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
   background: rgba(1, 15, 46, .86); backdrop-filter: blur(12px);
@@ -57,7 +57,7 @@ h3 { font-size: 1.35rem; font-weight: 700; }
 .tabs button:hover { color: var(--text); }
 .tabs button.on { background: var(--accent); color: var(--on-accent); }
 
-/* ---------- paneles ---------- */
+/* ---------- panels ---------- */
 .pane { display: none; padding: 28px 0 56px; animation: fade .35s ease; }
 .pane.on { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -115,7 +115,7 @@ h3 { font-size: 1.35rem; font-weight: 700; }
 .alert { background: rgba(255, 93, 108, .12); border: 1px solid var(--bad); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
 .alert code { background: rgba(0, 0, 0, .35); padding: 2px 6px; border-radius: 6px; }
 
-/* ---------- jugador ---------- */
+/* ---------- player ---------- */
 .picker { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
 .field.grow { flex: 1 1 240px; }
@@ -140,7 +140,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .court-box h4 { margin: 0 0 6px; font: 700 1.05rem "Barlow Condensed", sans-serif; letter-spacing: .04em; }
 .court-box .stat { color: var(--muted); font-size: .84rem; }
 
-/* ---------- gráficos ---------- */
+/* ---------- charts ---------- */
 .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
 .chart .ax text, .chart text.t { fill: var(--muted); font: 500 11px Inter, sans-serif; }
 .chart .ax line, .chart .grid-l { stroke: var(--line); stroke-width: 1; }
@@ -157,7 +157,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; color: var(--muted); margin-top: 6px; }
 .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 
-/* ---------- jugador nuevo ---------- */
+/* ---------- new player ---------- */
 .mix { display: grid; gap: 10px; margin: 8px 0 16px; }
 .mix-row { display: grid; grid-template-columns: 1fr 52px; gap: 4px 12px; align-items: center; }
 .mix-row label { grid-column: 1 / -1; display: flex; justify-content: space-between; }
@@ -168,7 +168,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .own-grid label { display: flex; flex-direction: column; gap: 6px; }
 .note { color: var(--muted); font-size: .86rem; margin: 10px 0 0; }
 
-/* ---------- texto ---------- */
+/* ---------- text ---------- */
 .prose h3 { margin: 22px 0 6px; color: var(--accent-2); }
 .prose h3:first-child { margin-top: 0; }
 .prose p, .prose li { color: #c9d3e8; }
@@ -183,12 +183,12 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 
 @media (max-width: 860px) {
   .grid.two, .grid.two.wide-left, .courts { grid-template-columns: 1fr; }
-  .topbar-in { flex-direction: column; align-items: flex-start; gap: 6px; }
-  .tabs { width: 100%; }
+  .topbar-in { flex-wrap: wrap; gap: 6px 12px; }
+  .tabs { order: 3; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto; } }
 
-/* ---------- capa en lenguaje llano ---------- */
+/* ---------- plain-language layer ---------- */
 .plain { border-top: 3px solid var(--accent); }
 .plain-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-top: 12px; }
 .plain-grid h4 { margin: 8px 0 4px; font: 700 1.2rem "Barlow Condensed", sans-serif; letter-spacing: .02em; }
@@ -208,7 +208,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .glossary dt { font-weight: 700; color: var(--text); }
 .glossary dd { margin: 0; color: #c3cde2; }
 
-/* ---------- móvil ---------- */
+/* ---------- mobile ---------- */
 .grid > *, .card, .kpi { min-width: 0; }
 html, body { overflow-x: hidden; }
 @media (max-width: 860px) {
@@ -218,7 +218,7 @@ html, body { overflow-x: hidden; }
   .coach-grid .tag.alt { margin-top: 6px; }
 }
 
-/* ---------- identidad AQX ---------- */
+/* ---------- AQX identity ---------- */
 .banner {
   position: relative; margin: 22px 0 6px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
   height: clamp(150px, 22vw, 250px);
@@ -228,7 +228,7 @@ html, body { overflow-x: hidden; }
     linear-gradient(120deg, #010f2e 0%, #03194a 100%);
   box-shadow: var(--shadow);
 }
-.banner::after { /* vértices del logo: marco angular */
+.banner::after { /* logo vertices: angular frame */
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background:
     linear-gradient(var(--accent), var(--accent)) left top / 28px 2px no-repeat,
@@ -256,3 +256,15 @@ h3 { letter-spacing: .03em; }
 .foot .brands img { height: 30px; width: auto; opacity: .92; }
 .foot .brands .dp { height: 18px; opacity: .85; }
 @media (max-width: 860px) { .banner .tag-devpost { display: none; } }
+
+/* ---------- icons and language switch ---------- */
+.ic { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  vertical-align: -.2em; flex: none; }
+.tabs button, .btn { display: inline-flex; align-items: center; gap: 7px; }
+.card h3 .ic, .plain h3 .ic, .coach h3 .ic, .glossary summary .ic { margin-right: 8px; color: var(--accent); }
+.lang { display: flex; align-items: center; gap: 2px; color: var(--muted); padding: 3px; border: 1px solid rgba(var(--accent-rgb), .3); border-radius: 999px; }
+.lang .ic { margin: 0 4px 0 8px; }
+.lang button { appearance: none; background: transparent; border: 0; color: var(--muted); font: 700 .76rem Inter, sans-serif;
+  letter-spacing: .06em; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.lang button:hover { color: var(--text); }
+.lang button.on { background: var(--accent); color: var(--on-accent); }

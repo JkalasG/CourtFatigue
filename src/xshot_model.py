@@ -1,19 +1,18 @@
 """
-CourtFatigue - Módulo de Tiro Esperado (xShot) y residuo de rendimiento
-Autor: Proyecto CourtFatigue (AQX Sports Analytics Data Bowl 4.0)
+CourtFatigue - expected shot (xShot) model and performance residual.
 
-xShot = probabilidad de que un tiro entre según su dificultad intrínseca (distancia,
-posición en la cancha, zona, mecánica). NO usa minutos en pista ni identidad del jugador:
-así el residuo (SHOT_MADE_FLAG - xShot) mide rendimiento por encima o debajo de lo esperado
-sin absorber el efecto que queremos estudiar.
+xShot = probability that a shot goes in given its intrinsic difficulty (distance, court
+position, zone, shot mechanics). It does NOT use minutes on court or player identity, so the
+residual (SHOT_MADE_FLAG - xShot) measures over/under-performance without absorbing the
+effect we want to study.
 
-Validación (dos niveles):
-  1) validación cruzada agrupada por partido (GroupKFold): cada tiro se predice con un
-     modelo que no vio su partido; con ella se calcula el residuo usado en el análisis;
-  2) prueba TEMPORAL: se entrena con las temporadas anteriores y se evalúa en la última,
-     que el modelo nunca vio (la medida más honesta de precisión).
-Se reportan log-loss, Brier, AUC y error de calibración, comparando una regresión
-logística con gradient boosting; se usa el de menor log-loss.
+Validation (two levels):
+  1) game-grouped cross-validation (GroupKFold): every shot is predicted by a model that
+     never saw its game; this produces the residual used in the analysis;
+  2) TEMPORAL test: train on earlier seasons, evaluate on the last one, which the model
+     never saw (the most honest accuracy measure).
+Reported: log-loss, Brier, AUC and calibration error, comparing logistic regression with
+gradient boosting; the one with the lower log-loss is used.
 """
 
 import sys
@@ -39,7 +38,7 @@ METRICS_FILE = "data/processed/xshot_metrics.json"
 
 
 def clean_action_type(action: str) -> str:
-    """Agrupa mecánicas de tiro similares para dar robustez al modelo."""
+    """Group similar shot mechanics to make the model more robust."""
     act = str(action).lower()
     if "dunk" in act:
         return "Dunk"
@@ -99,7 +98,7 @@ def expected_calibration_error(y, p, bins=10) -> float:
 
 
 def cross_fitted_xshot(df: pd.DataFrame, n_splits: int = 5):
-    """Predicción fuera de muestra (agrupada por partido) con ambos modelos; devuelve métricas."""
+    """Out-of-sample (game-grouped) predictions with both models; returns the metrics."""
     df = add_features(df)
     ok = df[FEATURES + ["SHOT_MADE_FLAG"]].notna().all(axis=1)
     df = df[ok].reset_index(drop=True)
@@ -121,7 +120,7 @@ def cross_fitted_xshot(df: pd.DataFrame, n_splits: int = 5):
     if "SEASON" in df.columns and df["SEASON"].nunique() > 1:
         last = sorted(df["SEASON"].astype(str).unique())[-1]
         tr_m, te_m = (df["SEASON"].astype(str) != last).values, (df["SEASON"].astype(str) == last).values
-        print(f"   prueba temporal: entrena con {int(tr_m.sum()):,} tiros, evalúa en {last} ({int(te_m.sum()):,} tiros)")
+        print(f"   temporal test: train on {int(tr_m.sum()):,} shots, evaluate on {last} ({int(te_m.sum()):,} shots)")
         hold = {}
         for name, make in (("logistic", _logistic), ("boosting", _boosting)):
             m = make().fit(df.loc[tr_m, FEATURES], y[tr_m])
@@ -135,7 +134,7 @@ def cross_fitted_xshot(df: pd.DataFrame, n_splits: int = 5):
     best = min(("logistic", "boosting"), key=lambda n: metrics[n]["log_loss"])
     metrics["chosen"] = best
     metrics["n_shots"] = int(len(df))
-    metrics["validation"] = f"GroupKFold({n_splits}) por partido, fuera de muestra"
+    metrics["validation"] = f"GroupKFold({n_splits}) by game, out-of-sample"
     df["xShot"] = np.round(preds[best], 4)
     df["shot_residual"] = np.round(df["SHOT_MADE_FLAG"] - df["xShot"], 4)
     return df, metrics
@@ -152,11 +151,11 @@ def process_and_save_full_dataset(seasons=("2021", "2022", "2023", "2024"),
     frames = []
     for sea in seasons:
         f = f"data/processed/by_season/stints_{sea}.csv"
-        print(f"📂 Leyendo {f}")
+        print(f"Reading {f}")
         frames.append(pd.read_csv(f, low_memory=False, dtype={"SEASON": str}))
     df = pd.concat(frames, ignore_index=True)
-    print(f"   {len(df):,} tiros en {len(seasons)} temporadas")
-    print("🧠 Validación del modelo de tiro esperado...")
+    print(f"   {len(df):,} shots in {len(seasons)} seasons")
+    print("Validating the expected-shot model...")
     df_out, metrics = cross_fitted_xshot(df)
     with open(METRICS_FILE, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
@@ -168,13 +167,13 @@ def process_and_save_full_dataset(seasons=("2021", "2022", "2023", "2024"),
         for name in ("logistic", "boosting"):
             m = h[name]
             print(f"   [Temporal {h['test_season']}] {name:9s} log-loss {m['log_loss']:.4f} | AUC {m['auc']:.3f} | ECE {m['ece']:.4f}")
-    print(f"   elegido: {metrics['chosen']}")
+    print(f"   chosen: {metrics['chosen']}")
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     df_out[[c for c in KEEP if c in df_out.columns]].to_csv(output_file, index=False)
-    print(f"🎉 Guardado {output_file} ({len(df_out):,} tiros)")
+    print(f"Saved {output_file} ({len(df_out):,} shots)")
     return df_out
 
 
 if __name__ == "__main__":
-    # Uso: python src/xshot_model.py [temporada ...]   (por defecto: 2021 2022 2023 2024)
+    # Usage: python src/xshot_model.py [season ...]   (default: 2021 2022 2023 2024)
     process_and_save_full_dataset(tuple(sys.argv[1:]) or ("2021", "2022", "2023", "2024"))

@@ -1,12 +1,12 @@
+[English](../project_description.md) | [Español](descripcion_proyecto.md)
+
 # CourtFatigue: ¿cuándo deja de rendir un jugador y dónde lo nota la cancha?
 
-Actualizado el 28 oct 2026 · @juan
+Actualizado el 28 oct 2026
 
 ## Resumen
 
 CourtFatigue es una herramienta de análisis que mide si el rendimiento de tiro de un jugador de la NBA cae según los minutos seguidos que lleva en cancha, en qué zonas, y con qué certeza se puede afirmar algo de un jugador concreto o de uno nuevo. Incluye un simulador 3D donde cada término de la probabilidad de anotar sale de datos medidos. Su objetivo es dar al entrenador una referencia honesta para decidir sustituciones: qué dicen los datos, qué no, y qué conviene probar.
-
-*El nombre es una propuesta; puedes cambiarlo.*
 
 ## El problema
 
