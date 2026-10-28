@@ -1,6 +1,6 @@
-# CourtFatigue - Dependencies
+# CourtFatigue - Dependencias del análisis (la interfaz web no necesita Python en ejecución)
 pandas>=2.2.0
 numpy>=1.26.0
 scikit-learn>=1.4.0
-plotly>=5.20.0
-streamlit>=1.35.0
+# Solo para scripts/download_data.py (descarga de datos nuevos):
+# nba_api>=1.4.1

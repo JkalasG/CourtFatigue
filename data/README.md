@@ -1,6 +1,13 @@
 # 📊 Diccionario y Documentación de Datasets — CourtFatigue
 
-Este directorio contiene los datos de la **Temporada Regular de la NBA 2023–24 (1,230 partidos completos)** utilizados por **CourtFatigue** para estimar el impacto de la fatiga en el rendimiento de tiro de los jugadores.
+Este directorio contiene los datos usados por **CourtFatigue** para estimar el impacto de la fatiga en el rendimiento de tiro:
+
+| Conjunto | Contenido | Uso |
+| --- | --- | --- |
+| **NBA 2021-22, 2022-23, 2023-24, 2024-25** (temporadas regulares) | 4 × 1,230 partidos, 872,158 tiros con coordenadas y su play-by-play | Análisis principal |
+| **Registro de tiros 2014-15** ("NBA shot logs", CC0) | 128,069 tiros con distancia al defensor más cercano, reloj de posesión, toques y regates | Simulador 3D y medición de la limitación por falta de datos del defensor. **No se cruza** con las otras temporadas |
+
+**Convención de nombres:** en los archivos de origen, la temporada `2024` es la 2024-25 (empieza en octubre de 2024), la `2023` es la 2023-24, y así sucesivamente.
 
 ---
 
@@ -9,10 +16,14 @@ Este directorio contiene los datos de la **Temporada Regular de la NBA 2023–24
 ```text
 data/
 ├── raw/                                 # Datasets originales sin modificar
-│   ├── shotdetail_2024.csv              # 219,527 tiros con coordenadas y zonas
-│   └── nbastats_2024.csv                # Play-by-play completo y sustituciones
-├── processed/                           # Datasets procesados y listos para modelado
-│   └── (generado por pipeline)          # Tiros con stint_minutes, xShot y residuos
+│   ├── shotdetail_2024.csv              # 2024-25: 219,527 tiros con coordenadas y zonas
+│   ├── nbastats_2024.csv                # 2024-25: play-by-play completo (94 MB; no versionado)
+│   ├── seasons/<año>/                   # 2021, 2022, 2023: mismos dos archivos (scripts/download_seasons.py)
+│   └── external/shot_logs_2014/         # 2014-15 con distancia al defensor (scripts/download_shot_logs.py)
+├── processed/                           # Datasets procesados y listos para modelado (regenerables)
+│   ├── by_season/stints_<año>.csv       # tiros + minutos seguidos, marcador y local, por temporada
+│   ├── shots_fatigue_processed.csv      # 4 temporadas + xShot validado fuera de muestra + residuo
+│   └── xshot_metrics.json               # log-loss, Brier, AUC y calibración del xShot (cruzada y temporal)
 └── README.md                            # Este documento de especificación
 ```
 
@@ -113,21 +124,40 @@ data/
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │        DATASET PROCESADO (data/processed/)             │
-│  • stint_minutes        (Minutos ininterrumpidos)      │
-│  • total_game_minutes   (Carga acumulada en el juego)  │
+│  • stint_minutes        (Minutos seguidos, medio       │
+│                          tiempo reinicia)              │
+│  • game_minutes_played  (Carga acumulada en el juego)  │
 │  • xShot                (Probabilidad base de acierto) │
-│  • fatigue_residual     (Acierto Real - xShot)         │
-│  • fatigue_bucket       (Rango: 0-2m, 2-5m, 8-10m...)  │
+│  • shot_residual        (Acierto Real - xShot)         │
+│  • stint_inferred       (tirador no figuraba en pista) │
 └────────────────────────────────────────────────────────┘
 ```
 
-1. **Reconstrucción de Quintetos Iniciales:** Al inicio de cada periodo (`PERIOD`, reloj `12:00`), se deduce qué 5 jugadores de cada equipo están en pista. Su contador de minutos continuos arranca en `0.0`.
-2. **Cronómetro Continuo de Stints:** Cada segundo de reloj transcurrido suma tiempo a los 10 jugadores en pista.
-3. **Manejo de Sustituciones (`EVENTMSGTYPE = 8`):**
-   * El jugador que sale (`PLAYER1_ID`) congela su contador y sale de la lista activa.
-   * El jugador que entra (`PLAYER2_ID`) se incorpora con su contador de minutos continuos reiniciado a `0.0`.
-4. **Asignación del Tiro:** Al ocurrir un tiro (`GAME_EVENT_ID`), se le asigna el valor exacto de `stint_minutes` que acumulaba ese jugador en ese instante.
-5. **Cálculo del Tiro Esperado ($xShot$) y Residuo:**
-   * $xShot$: Probabilidad promedio esperada en base a `SHOT_DISTANCE`, `SHOT_ZONE_BASIC` y `ACTION_TYPE`.
-   * $\text{Residuo} = \text{SHOT\_MADE\_FLAG} - xShot$.
-   * Si el residuo disminuye significativamente conforme `stint_minutes` supera los 8–10 minutos, se comprueba la curva de fatiga.
+1. **Quién está en pista:** el PBP **no registra las sustituciones hechas entre cuartos**. En cada cuarto se considera "ya en pista" a quien aparece activo antes de entrar como sustituto; si además estaba en pista al cerrar el cuarto anterior, conserva su contador. Un tirador que no figura en pista se marca con `stint_inferred = True` (~0.3% de los tiros) y se excluye del análisis principal.
+2. **Cronómetro de stints:** solo cuenta tiempo de juego (los descansos no suman). `stint_minutes` sigue entre Q1→Q2 y Q3→Q4 y **se reinicia en el medio tiempo**; `stint_minutes_quarter` se reinicia en cada cuarto (prueba de sensibilidad).
+3. **Sustituciones (`EVENTMSGTYPE = 8`):** `PLAYER1_ID` sale y `PLAYER2_ID` entra con el contador en 0.
+4. **Asignación del tiro:** cada tiro recibe `stint_minutes`, `stint_minutes_quarter`, `game_minutes_played` (carga acumulada en el partido), `score_margin` (ventaja del equipo del tirador **antes** del tiro, a partir de `SCOREMARGIN`, que es local − visitante) e `is_home` (`PERSON1TYPE = 4`).
+5. **Tiro esperado (xShot) y residuo:** gradient boosting con distancia, coordenadas, zona, tipo de tiro, periodo y tiempo restante (sin minutos en pista ni identidad del jugador). Se predice fuera de muestra con validación cruzada agrupada por partido; además se evalúa con una prueba temporal (entrenar con las temporadas anteriores, evaluar en la última). `shot_residual = SHOT_MADE_FLAG - xShot`.
+6. **Comparación dentro de temporada:** cada jugador se compara con su promedio **en esa temporada** (`dev = shot_residual − promedio del jugador-temporada`), porque su nivel cambia de un año a otro.
+7. **Inferencia:** el efecto de fatiga se estima en `src/fatigue_stats.py` (contraste ≥ 8 min contra 2-6 min por jugador, pendiente con efectos fijos, efectos aleatorios, corrección por comparaciones múltiples y prueba placebo).
+8. **Calendario:** `b2b` (el equipo jugó el día anterior) se calcula en `scripts/build_web_data.py` con `GAME_DATE`.
+
+### Columnas añadidas por el pipeline
+
+| Columna | Descripción |
+| --- | --- |
+| `SEASON` | Temporada de origen (`2021`…`2024`) |
+| `stint_minutes` / `stint_minutes_quarter` | Minutos seguidos (reinicia en el medio tiempo / en cada cuarto) |
+| `game_minutes_played` | Minutos acumulados por el tirador en el partido |
+| `stint_inferred` | El tirador no figuraba en pista según la reconstrucción |
+| `score_margin` | Ventaja del equipo del tirador antes del tiro |
+| `is_home` | El tirador juega de local |
+| `xShot`, `shot_residual` | Probabilidad esperada (fuera de muestra) y residuo |
+
+## 🛡️ 4. Registro de tiros 2014-15 (distancia al defensor)
+
+* **Ruta:** `data/raw/external/shot_logs_2014/shot_logs_2014.csv` (se genera con `scripts/download_shot_logs.py`).
+* **Fuente:** Kaggle "NBA shot logs", espejo de OpenML (CC0). 128,069 tiros, 904 partidos, hasta el 4 de marzo de 2015.
+* **Columnas clave:** `SHOT_DIST` (pies), `PTS_TYPE`, `CLOSE_DEF_DIST` (distancia al defensor más cercano, pies), `CLOSEST_DEFENDER`, `SHOT_CLOCK`, `TOUCH_TIME`, `DRIBBLES`, `FGM`.
+* **Uso:** (a) tabla del efecto de la distancia al defensor para el simulador (`web/data/contest.json`), solo entre 1.5 y 8 pies, y relativa a la distancia típica del defensor para cada distancia de tiro (mediana en 2014-15); (b) medir cuánto mejora un tiro esperado al conocer al defensor (AUC 0.617 → 0.634).
+* **Cuidado:** otra época y otro sistema de medición; el efecto es asociación (los defensores se acercan más a los mejores tiradores y hay contraataques sin defensor). No hay una clave que permita cruzarlo con las temporadas 2021-25.

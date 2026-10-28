@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CourtFatigue · ¿Cuándo deja de rendir un jugador?</title>
+  <meta name="description" content="Análisis de fatiga de tiro en la NBA 2024-25 con inferencia estadística: minutos seguidos en cancha, mapas por zona y simulador para jugadores nuevos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#010f2e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23010f2e'/%3E%3Cpath d='M10 12h14l18 20-18 20H10l18-20z' fill='%23ffffff'/%3E%3Cpath d='M34 12h14l10 12-10 12z' fill='%23536581'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-in">
+      <a class="brand" href="#resumen" aria-label="CourtFatigue">
+        <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M3 20h34M20 3v34M8 8c8 7 8 17 0 24M32 8c-8 7-8 17 0 24" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Court<b>Fatigue</b></span>
+      </a>
+      <nav class="tabs" id="tabs" role="tablist">
+        <button role="tab" data-tab="resumen" class="on">Resumen</button>
+        <button role="tab" data-tab="jugador">Jugador</button>
+        <button role="tab" data-tab="evidencia">Evidencia</button>
+        <button role="tab" data-tab="nuevo">Jugador nuevo</button>
+        <button role="tab" data-tab="metodo">Método</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="load-error" class="alert hidden"></div>
+
+    <!-- RESUMEN -->
+    <section id="resumen" class="pane on">
+      <div class="banner" role="img" aria-label="AQX Analytics Hackathon">
+        <span class="tag-devpost">Participa en <img src="assets/devpost-logo.svg" alt="Devpost"></span>
+      </div>
+
+      <div class="hero">
+        <p class="eyebrow"><img src="assets/aqx-logo.png" alt="AQX Analytics Hackathon"><span>Sports Analytics Data Bowl 4.0 · <span id="season">NBA</span></span></p>
+        <h1>¿Cuándo deja de rendir un jugador y <em>dónde lo nota la cancha</em>?</h1>
+        <p class="lede" id="hero-lede">Cargando resultados…</p>
+        <div class="cta">
+          <button class="btn primary" data-go="jugador">Explorar un jugador</button>
+          <button class="btn" data-go="nuevo">Simular un jugador nuevo</button>
+        </div>
+      </div>
+
+      <div class="card plain" id="plain"></div>
+
+      <div class="grid kpis" id="hero-kpis"></div>
+
+      <div class="card verdict" id="verdict"></div>
+
+      <div class="card coach" id="coach"></div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Qué pasa con el acierto según los minutos seguidos</h3>
+          <p class="sub">Diferencia frente al promedio de cada jugador, ya descontada la dificultad del tiro. Barras = IC 95%.</p>
+          <div id="chart-pop-buckets" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>¿Sirve la regla "sustituir si cae 3 puntos"?</h3>
+          <p class="sub">% de jugadores que la regla manda sustituir, con datos reales y con los minutos barajados al azar (donde la fatiga no puede existir).</p>
+          <div id="chart-placebo" class="chart"></div>
+        </div>
+      </div>
+
+      <details class="card glossary" id="glossary"></details>
+    </section>
+
+    <!-- JUGADOR -->
+    <section id="jugador" class="pane">
+      <div class="card picker">
+        <div class="field">
+          <label for="team-sel">Equipo</label>
+          <select id="team-sel"></select>
+        </div>
+        <div class="field grow">
+          <label for="player-sel">Jugador</label>
+          <select id="player-sel"></select>
+        </div>
+        <div class="field">
+          <label for="short-rng">Descansado: &lt; <b id="short-v">4</b> min</label>
+          <input type="range" id="short-rng" min="2" max="5" step="0.5" value="4">
+        </div>
+        <div class="field">
+          <label for="long-rng">Cansado: ≥ <b id="long-v">8</b> min</label>
+          <input type="range" id="long-rng" min="6" max="10" step="0.5" value="8">
+        </div>
+      </div>
+
+      <div class="player-head" id="player-head"></div>
+      <div class="grid kpis" id="player-kpis"></div>
+      <div class="card verdict" id="player-verdict"></div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Rendimiento según minutos seguidos</h3>
+          <p class="sub">Residuo (acierto real − esperado) relativo al promedio del jugador. Cero = su nivel normal.</p>
+          <div id="chart-player-buckets" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>Diferencia largo vs. corto con su incertidumbre</h3>
+          <p class="sub">Estimación directa y estimación suavizada hacia el promedio de la liga.</p>
+          <div id="chart-player-contrast" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dónde tira: descansado vs. cansado</h3>
+        <p class="sub">Verde = anotado · Rojo = fallado. Los umbrales se controlan con los deslizadores de arriba.</p>
+        <div class="courts" id="courts"></div>
+      </div>
+    </section>
+
+    <!-- EVIDENCIA -->
+    <section id="evidencia" class="pane">
+      <div class="grid two">
+        <div class="card">
+          <h3>Cuántos tiros respaldan cada tramo</h3>
+          <p class="sub">Hay muchos datos hasta ~10 min seguidos y casi ninguno después. Más allá es extrapolar.</p>
+          <div id="chart-coverage" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>¿Resiste a los controles?</h3>
+          <p class="sub">Puntos porcentuales por cada minuto seguido adicional. Cada fila repite el análisis con otra condición (partidos decididos, local/visitante, marcador, calendario…).</p>
+          <div id="chart-slopes" class="chart"></div>
+          <p class="note" id="b2b-note"></p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>¿Se repite en cada temporada?</h3>
+          <p class="sub">Efecto de jugar 8 min o más frente a jugadores ya calentados (2-6 min), calculado por separado en cada temporada. Si fuera real, debería verse parecido en todas.</p>
+          <div id="chart-seasons" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>¿Y el arranque frío?</h3>
+          <p class="sub">Primeros 30 segundos tras entrar, por temporada.</p>
+          <div id="chart-cold-seasons" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>El arranque frío: qué pasa justo después de entrar</h3>
+        <p class="sub">Acierto ajustado por dificultad, relativo al promedio de cada jugador. Va en sentido contrario a la fatiga: el tiro empieza más frío y mejora con los minutos.</p>
+        <div id="chart-cold" class="chart"></div>
+        <p class="note" id="cold-note"></p>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3>¿En qué zonas cambia el acierto con los minutos?</h3>
+          <p class="sub">Pendiente por zona desde los 2 min (ya calentado), en pp por minuto seguido. Solo se considera real si sobrevive a la corrección por comparaciones múltiples.</p>
+          <div id="chart-zones" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>¿Depende de las características del jugador?</h3>
+          <p class="sub">Cambio del efecto por cada desviación estándar de cada característica.</p>
+          <div id="chart-metareg" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Qué equipos defienden mejor</h3>
+        <p class="sub">Efecto defensivo de cada equipo sobre el acierto del rival, descontando la dificultad del tiro. Es el efecto que usa el simulador 3D al elegir un rival.</p>
+        <div id="chart-defense" class="chart"></div>
+        <p class="note" id="def-ev-note"></p>
+      </div>
+
+      <div class="card">
+        <h3>Diferencias entre jugadores</h3>
+        <div id="het-text" class="prose"></div>
+      </div>
+    </section>
+
+    <!-- JUGADOR NUEVO -->
+    <section id="nuevo" class="pane">
+      <div class="grid two wide-left">
+        <div class="card">
+          <h3>Perfil del jugador nuevo</h3>
+          <p class="sub">Un jugador sin historial en estos datos. Describe cómo tira y, si lo tienes, añade sus tiros reales.</p>
+          <div id="mix-sliders" class="mix"></div>
+          <div class="field">
+            <label for="skill-rng">Nivel de tirador vs. promedio de la liga: <b id="skill-v">+0.0</b> pp</label>
+            <input type="range" id="skill-rng" min="-6" max="6" step="0.5" value="0">
+          </div>
+          <details class="own">
+            <summary>Tengo tiros reales de este jugador (opcional)</summary>
+            <div class="own-grid">
+              <label>Tiros con <span class="sv">2–6</span> min seguidos <input type="number" id="own-ns" min="0" value="0"></label>
+              <label>…de los cuales anotó <input type="number" id="own-ms" min="0" value="0"></label>
+              <label>Tiros con ≥ <span class="lv">8</span> min seguidos <input type="number" id="own-nl" min="0" value="0"></label>
+              <label>…de los cuales anotó <input type="number" id="own-ml" min="0" value="0"></label>
+            </div>
+          </details>
+        </div>
+        <div class="card">
+          <h3>Proyección de acierto</h3>
+          <div id="proj-kpis" class="grid kpis small"></div>
+          <div id="chart-projection" class="chart"></div>
+          <p class="note" id="proj-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MÉTODO -->
+    <section id="metodo" class="pane">
+      <div class="card">
+        <h3>Simulador 3D <span class="badge warn">ilustrativo</span></h3>
+        <p class="sub">Tira desde cualquier punto de la cancha y ajusta los minutos seguidos, el equipo rival y la distancia del defensor. Cada término de la probabilidad sale de datos medidos (acierto del jugador, distancia del tiro, defensa del rival, arranque frío y fatiga); las posiciones de los otros defensores son ilustrativas.</p>
+        <a class="btn primary" href="simulador/index.html">Abrir el simulador 3D</a>
+      </div>
+      <div class="card prose" id="method-text"></div>
+    </section>
+  </main>
+
+  <footer class="foot wrap">
+    <div class="brands">
+      <img src="assets/aqx-logo.png" alt="AQX Analytics Hackathon">
+      <img class="dp" src="assets/devpost-logo.svg" alt="Devpost">
+      <span>CourtFatigue · AQX Sports Analytics Data Bowl 4.0</span>
+    </div>
+    <span>Datos: NBA Stats API (temporadas regulares 2021-25) y registro de tiros 2014-15 (CC0). Asociación, no causalidad.</span>
+  </footer>
+
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

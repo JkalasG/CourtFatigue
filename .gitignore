@@ -14,3 +14,18 @@ __pycache__/
 
 # Streamlit
 .streamlit/
+
+# Intermedio regenerable (src/stint_calculator.py)
+data/processed/shots_with_stints.csv
+data/processed/shots_sample_stints.csv
+
+# Temporadas adicionales (se descargan con scripts/download_seasons.py) y datos procesados grandes
+data/raw/seasons/
+data/processed/by_season/
+data/processed/shots_fatigue_processed.csv
+
+# Datos externos descargables con scripts/download_shot_logs.py
+data/raw/external/
+
+# Three.js local para tests/test_simulator.js
+tests/three.min.js
