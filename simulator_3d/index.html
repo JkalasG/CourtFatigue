@@ -645,7 +645,8 @@
         let activePlayerKey = "Curry";
 
         // Referencias para articulaciones y animación
-        let rightArmJoint, leftArmJoint, rightForearmJoint, headMesh, jerseyMesh, shortsMesh;
+        let bodyGroup, rightArm, leftArm, rightLeg, leftLeg, headMesh, jerseyMesh, shortsMesh;
+        let ballInHands = true;
 
         // 1. Inicialización de la Escena
         function initScene() {
@@ -840,38 +841,122 @@
         }
 
         // =========================================================================
-        // 2. MODELADO MEJORADO DEL JUGADOR (ANATOMÍA ATLÉTICA, UNIFORME, DORSAL)
+        // 2. MODELADO MEJORADO DEL JUGADOR (ESQUELETO ARTICULADO, UNIFORME, DORSAL)
         // =========================================================================
 
-        // Genera textura de camiseta con dorsal y franja de equipo
+        // Medidas del esqueleto en metros (antes de escalar por estatura)
+        const UPPER_ARM = 0.30, FOREARM = 0.27, THIGH = 0.45, SHIN = 0.45;
+        const HIP_Y = 0.95, SHOULDER_Y = 1.58, ANKLE_Y = 0.1;
+        const IDLE_CROUCH = 0.04;
+
+        // Balón en coordenadas locales del jugador (+Z mira hacia el aro)
+        const BALL_HOLD = new THREE.Vector3(0.1, 1.25, 0.32);      // Triple amenaza
+        const BALL_SET_POINT = new THREE.Vector3(0.1, 2.02, 0.3);  // Armado sobre el ojo derecho
+
+        // Posición de cada muñeca respecto al balón y dirección hacia donde apunta el codo
+        const RIGHT_HAND_HOLD = new THREE.Vector3(0.1, 0.0, -0.08);
+        const RIGHT_HAND_SET = new THREE.Vector3(0.0, -0.15, -0.05);
+        const LEFT_HAND_HOLD = new THREE.Vector3(-0.13, 0.02, -0.02);
+        const LEFT_HAND_SET = new THREE.Vector3(-0.15, -0.02, -0.02);
+        const ELBOW_POLE_R_HOLD = new THREE.Vector3(1, 0, -1);
+        const ELBOW_POLE_R_SET = new THREE.Vector3(0.2, -1, 0.4);
+        const ELBOW_POLE_L_HOLD = new THREE.Vector3(-1, 0, -1);
+        const ELBOW_POLE_L_SET = new THREE.Vector3(-1, -0.4, 0);
+        const KNEE_POLE = new THREE.Vector3(0, 0, 1);
+        const DOWN = new THREE.Vector3(0, -1, 0);
+
+        const hexColor = (c) => '#' + c.toString(16).padStart(6, '0');
+
+        // Textura de camiseta sin mangas. En un CylinderGeometry u=0 es el frente (+Z)
+        // y u=0.5 la espalda, así que el dorsal grande va al centro del canvas y el
+        // frontal se dibuja partido en ambos bordes para que se una en la costura.
         function createJerseyTexture(pData) {
             const canvas = document.createElement('canvas');
-            canvas.width = 256;
+            canvas.width = 512;
             canvas.height = 256;
             const ctx = canvas.getContext('2d');
+            const trim = hexColor(pData.trimColor);
 
-            // Color base del equipo
-            ctx.fillStyle = '#' + pData.jerseyColor.toString(16).padStart(6, '0');
-            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = hexColor(pData.jerseyColor);
+            ctx.fillRect(0, 0, 512, 256);
 
-            // Franjas laterales de acento
-            ctx.fillStyle = '#' + pData.trimColor.toString(16).padStart(6, '0');
-            ctx.fillRect(0, 0, 24, 256);
-            ctx.fillRect(232, 0, 24, 256);
+            // Ribete de cuello/sisas, bajo de la camiseta y paneles laterales
+            ctx.fillStyle = trim;
+            ctx.fillRect(0, 0, 512, 10);
+            ctx.fillRect(0, 244, 512, 12);
+            ctx.fillRect(117, 0, 22, 256);
+            ctx.fillRect(373, 0, 22, 256);
 
-            // Texto de franquicia arriba
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 36px Outfit, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(pData.team, 128, 65);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#FFFFFF';
 
-            // Gran número de dorsal en el pecho
-            ctx.fillStyle = '#' + pData.trimColor.toString(16).padStart(6, '0');
-            ctx.font = 'bold 96px Orbitron, sans-serif';
-            ctx.fillText(pData.number, 128, 165);
+            // Espalda: apellido + dorsal grande
+            const lastName = pData.name.split(' ').slice(-1)[0].toUpperCase();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 30px Outfit, sans-serif';
+            ctx.fillText(lastName, 256, 58);
+            ctx.fillStyle = trim;
+            ctx.font = 'bold 120px Orbitron, sans-serif';
+            ctx.strokeText(pData.number, 256, 190);
+            ctx.fillText(pData.number, 256, 190);
+
+            // Frente: franquicia + dorsal mediano
+            [0, 512].forEach(x => {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 34px Outfit, sans-serif';
+                ctx.fillText(pData.team, x, 70);
+                ctx.fillStyle = trim;
+                ctx.font = 'bold 80px Orbitron, sans-serif';
+                ctx.strokeText(pData.number, x, 165);
+                ctx.fillText(pData.number, x, 165);
+            });
 
             const texture = new THREE.CanvasTexture(canvas);
+            texture.anisotropy = 4;
             return texture;
+        }
+
+        // Segmento cilíndrico que cuelga hacia -Y desde su articulación
+        function makeSegment(rTop, rBottom, length, mat) {
+            const geo = new THREE.CylinderGeometry(rTop, rBottom, length, 14);
+            geo.translate(0, -length / 2, 0);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        // Extremidad de dos huesos: root (hombro/cadera) -> mid (codo/rodilla) -> end (muñeca/tobillo)
+        function makeLimb(parent, origin, len1, len2) {
+            const root = new THREE.Group();
+            root.position.copy(origin);
+            const mid = new THREE.Group();
+            mid.position.y = -len1;
+            const end = new THREE.Group();
+            end.position.y = -len2;
+            root.add(mid);
+            mid.add(end);
+            parent.add(root);
+            return { root, mid, end, len1, len2 };
+        }
+
+        // IK analítico de dos huesos: lleva el extremo a `target` (coordenadas del padre)
+        // doblando la articulación media hacia `pole`.
+        function solveLimb(limb, target, pole) {
+            const toTarget = target.clone().sub(limb.root.position);
+            const dist = THREE.MathUtils.clamp(toTarget.length(), 0.05, limb.len1 + limb.len2 - 0.001);
+            const dir = toTarget.normalize();
+            const bend = pole.clone().sub(dir.clone().multiplyScalar(pole.dot(dir))).normalize();
+            const cosA = (limb.len1 ** 2 + dist ** 2 - limb.len2 ** 2) / (2 * limb.len1 * dist);
+            const a = Math.acos(THREE.MathUtils.clamp(cosA, -1, 1));
+
+            const midPos = dir.clone().multiplyScalar(Math.cos(a) * limb.len1)
+                .add(bend.multiplyScalar(Math.sin(a) * limb.len1));
+            const lowerDir = dir.multiplyScalar(dist).sub(midPos).normalize();
+
+            limb.root.quaternion.setFromUnitVectors(DOWN, midPos.normalize());
+            const lowerQuat = new THREE.Quaternion().setFromUnitVectors(DOWN, lowerDir);
+            limb.mid.quaternion.copy(limb.root.quaternion).invert().multiply(lowerQuat);
         }
 
         function buildAthleticPlayer() {
@@ -881,123 +966,163 @@
 
             const pData = PLAYERS_DATA[activePlayerKey];
             playerGroup = new THREE.Group();
+            // Todo lo que está de la cadera hacia arriba baja junto al flexionar rodillas
+            bodyGroup = new THREE.Group();
+            playerGroup.add(bodyGroup);
 
             const skinMat = new THREE.MeshStandardMaterial({ color: pData.skinColor, roughness: 0.6 });
-            const hairMat = new THREE.MeshStandardMaterial({ color: pData.hairColor, roughness: 0.8 });
-            const shortsMat = new THREE.MeshStandardMaterial({ color: pData.shortsColor, roughness: 0.5 });
-            const shoesMat = new THREE.MeshStandardMaterial({ color: 0xF8FAFC, roughness: 0.3 });
-            const socksMat = new THREE.MeshStandardMaterial({ color: 0xE2E8F0, roughness: 0.8 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: pData.hairColor, roughness: 0.9 });
+            const shortsMat = new THREE.MeshStandardMaterial({ color: pData.shortsColor, roughness: 0.55 });
+            const trimMat = new THREE.MeshStandardMaterial({ color: pData.trimColor, roughness: 0.5 });
+            const shoesMat = new THREE.MeshStandardMaterial({ color: 0xF8FAFC, roughness: 0.35 });
+            const soleMat = new THREE.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.7 });
+            const socksMat = new THREE.MeshStandardMaterial({ color: 0xF1F5F9, roughness: 0.85 });
+            const jerseyMat = new THREE.MeshStandardMaterial({ map: createJerseyTexture(pData), roughness: 0.55 });
 
-            const jerseyTex = createJerseyTexture(pData);
-            const jerseyMat = new THREE.MeshStandardMaterial({ map: jerseyTex, roughness: 0.5 });
+            // 1. Cabeza, cuello, pelo, orejas y nariz (la nariz marca hacia dónde mira)
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.12, 14), skinMat);
+            neck.position.y = 1.68;
+            bodyGroup.add(neck);
 
-            // 1. Cabeza y Pelo
-            const headGeo = new THREE.SphereGeometry(0.13, 20, 20);
-            headMesh = new THREE.Mesh(headGeo, skinMat);
-            headMesh.position.y = 1.82;
-            playerGroup.add(headMesh);
+            headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 24), skinMat);
+            headMesh.scale.set(0.92, 1.1, 1.0);
+            headMesh.position.y = 1.83;
+            headMesh.castShadow = true;
+            bodyGroup.add(headMesh);
 
-            const hairGeo = new THREE.SphereGeometry(0.135, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2.2);
-            const hair = new THREE.Mesh(hairGeo, hairMat);
-            hair.position.y = 1.84;
-            playerGroup.add(hair);
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(0.119, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2.3), hairMat);
+            hair.scale.set(0.92, 1.1, 1.0);
+            hair.position.y = 1.845;
+            hair.rotation.x = -0.35;
+            bodyGroup.add(hair);
 
-            // 2. Torso Atlético (Ancho de hombros cónico estilo NBA)
-            const torsoGeo = new THREE.CylinderGeometry(0.22, 0.17, 0.62, 20);
-            jerseyMesh = new THREE.Mesh(torsoGeo, jerseyMat);
-            jerseyMesh.position.y = 1.34;
-            jerseyMesh.castShadow = true;
-            playerGroup.add(jerseyMesh);
-
-            // 3. Cadera y Pantalón de Baloncesto
-            const shortsGeo = new THREE.CylinderGeometry(0.19, 0.23, 0.38, 20);
-            shortsMesh = new THREE.Mesh(shortsGeo, shortsMat);
-            shortsMesh.position.y = 0.94;
-            shortsMesh.castShadow = true;
-            playerGroup.add(shortsMesh);
-
-            // 4. Piernas y Zapatillas de Baloncesto
-            [-0.11, 0.11].forEach(xOffset => {
-                // Muslo
-                const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.065, 0.38), skinMat);
-                thigh.position.set(xOffset, 0.68, 0);
-                thigh.castShadow = true;
-                playerGroup.add(thigh);
-
-                // Pantorrilla
-                const calf = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.05, 0.38), skinMat);
-                calf.position.set(xOffset, 0.32, 0);
-                calf.castShadow = true;
-                playerGroup.add(calf);
-
-                // Calcetines
-                const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.053, 0.052, 0.15), socksMat);
-                sock.position.set(xOffset, 0.15, 0);
-                playerGroup.add(sock);
-
-                // Zapatillas Altas (Sneakers)
-                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.1, 0.24), shoesMat);
-                shoe.position.set(xOffset, 0.05, 0.03);
-                shoe.castShadow = true;
-                playerGroup.add(shoe);
+            [-1, 1].forEach(side => {
+                const ear = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 10), skinMat);
+                ear.scale.set(0.5, 1, 0.8);
+                ear.position.set(side * 0.105, 1.82, 0);
+                bodyGroup.add(ear);
             });
 
-            // 5. Brazo Tirador Derecho (Articulado para animación fluida)
-            rightArmJoint = new THREE.Group();
-            rightArmJoint.position.set(0.24, 1.56, 0);
+            const nose = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 10), skinMat);
+            nose.position.set(0, 1.815, 0.112);
+            bodyGroup.add(nose);
 
-            const rUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.32), skinMat);
-            rUpperArm.position.y = -0.14;
-            rightArmJoint.add(rUpperArm);
+            // 2. Torso: camiseta sin mangas aplanada de adelante hacia atrás
+            jerseyMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.2, 0.56, 28), jerseyMat);
+            jerseyMesh.scale.z = 0.62;
+            jerseyMesh.position.y = 1.36;
+            jerseyMesh.castShadow = true;
+            bodyGroup.add(jerseyMesh);
 
-            rightForearmJoint = new THREE.Group();
-            rightForearmJoint.position.set(0, -0.28, 0);
+            // 3. Cintura del pantalón con elástico del color de acento
+            shortsMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.215, 0.2, 24), shortsMat);
+            shortsMesh.scale.z = 0.7;
+            shortsMesh.position.y = 1.0;
+            shortsMesh.castShadow = true;
+            bodyGroup.add(shortsMesh);
 
-            const rForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.30), skinMat);
-            rForearm.position.y = -0.13;
-            rightForearmJoint.add(rForearm);
+            const waistband = new THREE.Mesh(new THREE.CylinderGeometry(0.208, 0.208, 0.035, 24), trimMat);
+            waistband.scale.z = 0.7;
+            waistband.position.y = 1.085;
+            bodyGroup.add(waistband);
 
-            // Mano
-            const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), skinMat);
-            rHand.position.set(0, -0.29, 0);
-            rightForearmJoint.add(rHand);
+            // 4. Piernas: pantalón holgado hasta la rodilla, calcetín alto y zapatilla de caña alta
+            const buildLeg = (side) => {
+                const leg = makeLimb(bodyGroup, new THREE.Vector3(side * 0.11, HIP_Y, 0), THIGH, SHIN);
 
-            rightArmJoint.add(rightForearmJoint);
-            playerGroup.add(rightArmJoint);
+                leg.root.add(makeSegment(0.085, 0.07, THIGH, skinMat));
+                leg.root.add(makeSegment(0.125, 0.115, 0.4, shortsMat));
+                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.38, 0.05), trimMat);
+                stripe.position.set(side * 0.118, -0.2, 0);
+                leg.root.add(stripe);
 
-            // 6. Brazo Guía Izquierdo
-            leftArmJoint = new THREE.Group();
-            leftArmJoint.position.set(-0.24, 1.56, 0);
+                leg.mid.add(new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 12), skinMat));
+                leg.mid.add(makeSegment(0.068, 0.05, SHIN, skinMat));
+                const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.056, 0.22, 14), socksMat);
+                sock.position.y = -SHIN + 0.11;
+                leg.mid.add(sock);
 
-            const lUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.32), skinMat);
-            lUpperArm.position.y = -0.14;
-            leftArmJoint.add(lUpperArm);
+                const sole = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.035, 0.3), soleMat);
+                sole.position.set(0, -ANKLE_Y + 0.0175, 0.05);
+                const upper = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.1, 0.26), shoesMat);
+                upper.position.set(0, -0.015, 0.04);
+                const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.07, 14), shoesMat);
+                collar.position.y = 0.04;
+                const swoosh = new THREE.Mesh(new THREE.BoxGeometry(0.114, 0.025, 0.18), trimMat);
+                swoosh.position.set(0, -0.02, 0.05);
+                [sole, upper, collar, swoosh].forEach(m => { m.castShadow = true; leg.end.add(m); });
 
-            const lForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.042, 0.30), skinMat);
-            lForearm.position.set(0.12, -0.32, -0.12);
-            lForearm.rotation.z = Math.PI / 4;
-            leftArmJoint.add(lForearm);
+                return leg;
+            };
+            rightLeg = buildLeg(1);
+            leftLeg = buildLeg(-1);
 
-            playerGroup.add(leftArmJoint);
+            // 5. Brazos: deltoides, codo, muñequera en el brazo tirador y mano
+            const buildArm = (side) => {
+                const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 14), skinMat);
+                shoulder.position.set(side * 0.25, SHOULDER_Y + 0.02, 0);
+                bodyGroup.add(shoulder);
+
+                const arm = makeLimb(bodyGroup, new THREE.Vector3(side * 0.27, SHOULDER_Y, 0), UPPER_ARM, FOREARM);
+                arm.root.add(makeSegment(0.058, 0.048, UPPER_ARM, skinMat));
+                arm.mid.add(new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 12), skinMat));
+                arm.mid.add(makeSegment(0.048, 0.038, FOREARM, skinMat));
+                if (side === 1) {
+                    const wristband = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.042, 0.06, 14), trimMat);
+                    wristband.position.y = -FOREARM + 0.05;
+                    arm.mid.add(wristband);
+                }
+                const hand = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 12), skinMat);
+                hand.scale.set(0.85, 1.35, 0.55);
+                hand.position.y = -0.06;
+                arm.end.add(hand);
+                return arm;
+            };
+            rightArm = buildArm(1);
+            leftArm = buildArm(-1);
 
             // Escala según la altura real del jugador
             playerGroup.scale.set(pData.heightScale, pData.heightScale, pData.heightScale);
 
-            // Posición inicial de tiro con balón preparado
-            setPlayerShootingStance(0);
+            posePlayer(IDLE_CROUCH, 0);
 
             scene.add(playerGroup);
         }
 
-        // Postura del jugador en tiro (codo flexionado, balón en manos)
-        function setPlayerShootingStance(dipRatio = 0) {
-            // El codo sube hacia arriba y adelante
-            rightArmJoint.rotation.x = -Math.PI / 2.2 + dipRatio * 0.2;
-            rightArmJoint.rotation.z = -0.15;
-            rightForearmJoint.rotation.x = Math.PI / 1.7 - dipRatio * 0.3;
+        // Postura completa del jugador.
+        //   crouch: cuánto baja la cadera (los pies se quedan apoyados en el suelo)
+        //   lift:   0 = balón en triple amenaza, 1 = balón en el punto de armado del tiro
+        // Mientras el balón está en sus manos lo coloca; tras soltarlo hace el seguimiento.
+        function posePlayer(crouch = IDLE_CROUCH, lift = 0) {
+            bodyGroup.position.y = -crouch;
 
-            leftArmJoint.rotation.x = -Math.PI / 2.5;
-            leftArmJoint.rotation.z = 0.3;
+            [rightLeg, leftLeg].forEach(leg => {
+                const ankle = new THREE.Vector3(leg.root.position.x * 1.15, ANKLE_Y + crouch, 0.02);
+                solveLimb(leg, ankle, KNEE_POLE);
+                // La zapatilla queda plana sobre el suelo aunque la espinilla se incline
+                leg.end.quaternion.copy(leg.root.quaternion).multiply(leg.mid.quaternion).invert();
+            });
+
+            if (ballInHands) {
+                // El balón sube y baja junto con el cuerpo, así que en coordenadas
+                // del cuerpo no depende de crouch
+                const ball = BALL_HOLD.clone().lerp(BALL_SET_POINT, lift);
+                const target = ball.clone();
+                solveLimb(rightArm, target.clone().add(RIGHT_HAND_HOLD.clone().lerp(RIGHT_HAND_SET, lift)),
+                    ELBOW_POLE_R_HOLD.clone().lerp(ELBOW_POLE_R_SET, lift));
+                solveLimb(leftArm, target.clone().add(LEFT_HAND_HOLD.clone().lerp(LEFT_HAND_SET, lift)),
+                    ELBOW_POLE_L_HOLD.clone().lerp(ELBOW_POLE_L_SET, lift));
+
+                if (basketball) {
+                    ball.y -= crouch;
+                    playerGroup.updateMatrixWorld(true);
+                    basketball.position.copy(playerGroup.localToWorld(ball));
+                }
+            } else {
+                // Seguimiento: brazo tirador estirado hacia el aro, mano guía abierta al lado
+                solveLimb(rightArm, new THREE.Vector3(0.12, SHOULDER_Y + 0.55, 0.34), ELBOW_POLE_R_SET);
+                solveLimb(leftArm, new THREE.Vector3(-0.3, SHOULDER_Y + 0.3, 0.3), ELBOW_POLE_L_SET);
+            }
         }
 
         // Balón de Baloncesto
@@ -1011,11 +1136,8 @@
         }
 
         function resetBallToPlayerHands() {
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
-            const pHeight = PLAYERS_DATA[activePlayerKey].heightScale;
-            basketball.position.copy(playerGroup.position)
-                .add(new THREE.Vector3(0, 1.7 * pHeight, 0))
-                .add(forward.multiplyScalar(0.28));
+            ballInHands = true;
+            posePlayer(IDLE_CROUCH, 0);
             basketball.visible = true;
         }
 
@@ -1153,7 +1275,7 @@
             const finalProb = Math.max(10, pData.baseFg - distPenalty - fatigueDrop);
             const isMade = (Math.random() * 100) < finalProb;
 
-            // 1. Animación del Jugador: Flexión de rodillas -> Salto -> Lanzamiento con muñeca
+            // 1. Animación del Jugador: Flexión de rodillas subiendo el balón -> Salto -> Suelta y seguimiento
             playSound('jump');
             let jumpStep = 0;
             const pHeight = pData.heightScale;
@@ -1161,24 +1283,22 @@
             const jumpInterval = setInterval(() => {
                 jumpStep += 0.07;
                 if (jumpStep <= 0.4) {
-                    // Carga previa (knee dip)
-                    playerGroup.position.y = -Math.sin(jumpStep * Math.PI * 2.5) * 0.15;
-                    setPlayerShootingStance(1);
+                    // Carga previa (knee dip) mientras el balón sube al punto de armado
+                    const t = jumpStep / 0.4;
+                    posePlayer(IDLE_CROUCH + Math.sin(t * Math.PI) * 0.16, t);
                 } else if (jumpStep <= 1.0) {
-                    // Elevación en el aire (Jump shot)
+                    // Elevación en el aire (Jump shot); al soltar, posePlayer hace el seguimiento
                     playerGroup.position.y = Math.sin((jumpStep - 0.4) * Math.PI / 0.6) * 0.55 * pHeight;
-                    // Extensión de codo y muñeca
-                    rightArmJoint.rotation.x = -Math.PI / 1.7;
-                    rightForearmJoint.rotation.x = -0.3; // Quiebre de muñeca (wrist flick follow-through)
+                    posePlayer(0, 1);
                 } else {
                     playerGroup.position.y = 0;
-                    setPlayerShootingStance(0);
+                    posePlayer(IDLE_CROUCH, 1);
                     clearInterval(jumpInterval);
                 }
             }, 25);
 
-            // 2. Trayectoria del Balón (Parábola 3D dinámica desde la posición actual)
-            const startPos = basketball.position.clone();
+            // 2. Trayectoria del Balón (Parábola 3D dinámica desde las manos en el momento de soltar)
+            let startPos;
             let targetPos;
 
             if (isMade) {
@@ -1216,6 +1336,8 @@
 
             // Iniciar vuelo del balón en el punto culminante del salto
             setTimeout(() => {
+                ballInHands = false;
+                startPos = basketball.position.clone();
                 requestAnimationFrame(animateFlight);
             }, 180);
         }
@@ -1453,7 +1575,7 @@
                 controls.target.set(0, 2.0, -1.8);
             } else if (cameraModeIndex === 1) {
                 btn.textContent = "🎥 Vista: Tirador";
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerGroup.quaternion);
+                const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(playerGroup.quaternion);
                 camera.position.copy(playerGroup.position).add(new THREE.Vector3(0, 2.2, 0)).sub(forward.multiplyScalar(2.6));
                 controls.target.set(HOOP_X, HOOP_Y, HOOP_Z);
             } else if (cameraModeIndex === 2) {
