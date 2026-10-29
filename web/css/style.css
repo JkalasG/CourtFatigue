@@ -1,4 +1,4 @@
-/* CourtFatigue - "tactics board" theme: dark walnut board, chalk ink, thin court-line rules instead of boxes. */
+/* CourtFatigue - "tactics board" theme: dark walnut board, chalk ink, thin court-line rules as separators. */
 :root {
   /* surface: a walnut tactics board; floorboard seams are drawn on <body> */
   --board: #221c16;
@@ -100,7 +100,7 @@ a { color: var(--maple); }
 .btn.primary { background: var(--chalk); color: var(--board); border-color: var(--chalk); }
 .btn.primary:hover { background: #fff; }
 
-/* ---------- court-line rules (replace boxes) ---------- */
+/* ---------- court-line rules ---------- */
 /* .card is an open section: a hairline on top, nothing else */
 .card { border-top: 1px solid var(--hair); padding: 26px 0 8px; margin-top: 30px; }
 .card .sub { color: var(--muted); font-size: .9rem; margin: 6px 0 14px; max-width: 72ch; }
@@ -211,7 +211,7 @@ a { color: var(--maple); }
 .hero-art .ha-cold-t { fill: var(--bad); font: 500 11px var(--body); }
 .hero-art .ha-flat { fill: var(--good); font: 500 11px var(--body); }
 .hero-art .ha-ax { fill: var(--muted); font: 500 11px var(--body); }
-/* the one orchestrated moment: the court is chalked in on load */
+/* the court is chalked in once, on load */
 .hero-art .ha-court [pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; animation: chalk 1.4s cubic-bezier(.4, 0, .2, 1) .15s forwards; }
 @keyframes chalk { to { stroke-dashoffset: 0; } }
 
@@ -249,7 +249,7 @@ a { color: var(--maple); }
 .field.grow { flex: 1 1 240px; }
 label { color: var(--muted); font-size: .84rem; font-weight: 500; }
 label b { color: var(--chalk); }
-/* dropdowns read as dropdowns: a filled box, a border and an orange chevron; clear hover and focus states */
+/* dropdowns: filled box, border and an orange chevron, with hover and focus states */
 select, input[type=number] {
   background-color: var(--board-2); color: var(--chalk); border: 1px solid var(--hair); border-radius: 3px;
   padding: 10px 12px; font: 500 1rem var(--body); width: 100%; transition: border-color .15s, background-color .15s, box-shadow .15s;
