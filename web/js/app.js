@@ -42,16 +42,37 @@
   }
 
   /* ---------------- tabs ---------------- */
+  let backTo = null;       // where the "back" bar returns to: {tab, el}
   function show(tab) {
     if (!$("#" + tab)) tab = "summary";
+    $("#backbar").classList.add("hidden");
     $$(".pane").forEach((p) => p.classList.toggle("on", p.id === tab));
     $$("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
     if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab);
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
   function bindTabs() {
     $$("#tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.tab)));
-    document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) show(g.dataset.go); });
+    document.addEventListener("click", (e) => {
+      const g = e.target.closest("[data-go]");
+      if (!g) return;
+      show(g.dataset.go);
+      // links out of "Uses & benefits" land on the supporting chart and offer a way back
+      if (g.dataset.from) {
+        backTo = { tab: g.dataset.from, el: g.closest(".use") };
+        const bar = $("#backbar");
+        $("span", bar).textContent = t("back.to", { tab: t("nav." + g.dataset.from) });
+        bar.classList.remove("hidden");
+      }
+      const target = g.dataset.focus && $("#" + g.dataset.focus);
+      if (target) (target.closest(".card") || target).scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    $("#back-btn").addEventListener("click", () => {
+      if (!backTo) return;
+      const { tab, el } = backTo;
+      show(tab);
+      if (el) el.scrollIntoView({ block: "center", behavior: "instant" });
+    });
     window.addEventListener("hashchange", () => show(location.hash.slice(1)));
     $$("#lang-switch button").forEach((b) => b.addEventListener("click", () => window.I18N.set(b.dataset.lang)));
     // Scroll cue and back-to-top must not touch the hash (it drives the tabs)
@@ -138,13 +159,12 @@
 
     $("#hero-art").innerHTML = `<svg viewBox="0 0 380 470" role="img" aria-label="${esc(t("art.title"))}">
       <g class="ha-court">
-        <rect x="15" y="${base}" width="350" height="280" rx="4"/>
-        <rect x="${cx - 56}" y="${base}" width="112" height="${laneY - base}"/>
-        <circle cx="${cx}" cy="${laneY}" r="42"/>
-        <path d="M${cx - 28} ${rimY} a28 28 0 0 0 56 0"/>
-        <path d="M${cx - 154} ${base} V${cornerY.toFixed(1)} A${23.75 * k} ${23.75 * k} 0 0 0 ${cx + 154} ${cornerY.toFixed(1)} V${base}"/>
-        <path d="M15 300 H365" />
-        <path d="M${cx - 42} 300 a42 42 0 0 1 84 0"/>
+        <rect x="15" y="${base}" width="350" height="280" class="ha-floor"/>
+        <rect x="${cx - 56}" y="${base}" width="112" height="${laneY - base}" pathLength="1"/>
+        <circle cx="${cx}" cy="${laneY}" r="42" pathLength="1"/>
+        <path d="M${cx - 28} ${rimY} a28 28 0 0 0 56 0" pathLength="1"/>
+        <path d="M${cx - 154} ${base} V${cornerY.toFixed(1)} A${23.75 * k} ${23.75 * k} 0 0 0 ${cx + 154} ${cornerY.toFixed(1)} V${base}" pathLength="1"/>
+        <path d="M${cx - 42} 300 a42 42 0 0 1 84 0" pathLength="1"/>
       </g>
       ${dots}
       <line x1="${cx - 21}" y1="${base + 4 * k}" x2="${cx + 21}" y2="${base + 4 * k}" class="ha-board"/>
@@ -154,7 +174,7 @@
       ${matchMedia("(prefers-reduced-motion: reduce)").matches ? `<circle cx="${cx}" cy="${rimY}" r="6" class="ha-ball"/>`
         : `<circle r="6" class="ha-ball"><animateMotion dur="2.4s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.6;1" calcMode="linear"><mpath href="#ha-shot"/></animateMotion></circle>`}
       <g class="ha-card">
-        <rect x="12" y="318" width="356" height="140" rx="12"/>
+        <line x1="12" y1="322" x2="368" y2="322" class="ha-sep"/>
         <text x="28" y="343" class="ha-title">${esc(t("art.title"))}</text>
         <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" class="ha-zero"/>
         <polygon points="${band}" class="ha-band"/>
@@ -174,12 +194,14 @@
     const b2b = (S.slopes.con_controles || []).find((r) => r.term === "b2b");
     const v = { mu: fmt(h.mu * 100, 2), long: S.long, c0: c0 ? fmt(c0.effect_pp, 1) : "—", b2b: b2b ? fmt(b2b.coef_pp, 2) : "—",
       f: S.n_flagged, n: S.n_contrast_players, mde: S.power.mde_pp.toFixed(0) };
-    const yes = [["rot", "clock", "evidence"], ["entry", "arrow", "evidence"], ["b2b", "clipboard", "evidence"],
-      ["label", "player", "player"], ["rival", "court", "evidence"], ["sim", "cube", "method"]];
-    $("#uses-yes").innerHTML = yes.map(([k, ic, go], i) =>
-      `<div class="use"><div class="use-top"><span class="step">${i + 1}</span>${icon(ic)}</div>` +
+    // [key, icon, tab, element to land on]; the simulator opens directly
+    const yes = [["rot", "clock", "evidence", "chart-slopes"], ["entry", "arrow", "evidence", "chart-cold"], ["b2b", "clipboard", "evidence", "b2b-note"],
+      ["label", "player", "player"], ["rival", "court", "evidence", "chart-defense"], ["sim", "cube", "sim"]];
+    $("#uses-yes").innerHTML = yes.map(([k, ic, go, focus]) =>
+      `<div class="use"><svg class="ic lead" aria-hidden="true"><use href="#i-${ic}"/></svg>` +
       `<h3>${t("u." + k + ".t")}</h3><p>${t("u." + k + ".d", v)}</p>` +
-      `<button class="btn" data-go="${go}">${t("u.go." + go)}${icon("arrow")}</button></div>`).join("");
+      (go === "sim" ? `<a class="btn" href="simulador/index.html">${t("u.go.method")}</a></div>`
+        : `<button class="btn" data-go="${go}" data-from="uses"${focus ? ` data-focus="${focus}"` : ""}>${t("u.go." + go)}</button></div>`)).join("");
     $("#uses-no").innerHTML = ["live", "load", "other", "small", "long"]
       .map((k) => `<li>${icon("x")}<span>${t("u.no." + k, v)}</span></li>`).join("");
   }
@@ -232,11 +254,11 @@
     const pl = S.placebo, real = t("lg.real"), rnd = t("lg.random");
     $("#chart-placebo").innerHTML = groupedBars({
       groups: [
-        { label: t("pl.naive"), bars: [{ v: pl.naive_real * 100, color: C.accent, name: real }, { v: pl.naive_placebo * 100, color: "#5b6b90", name: rnd }] },
-        { label: t("pl.infer"), bars: [{ v: pl.inference_real * 100, color: C.accent, name: real }, { v: pl.inference_placebo * 100, color: "#5b6b90", name: rnd }] },
+        { label: t("pl.naive"), bars: [{ v: pl.naive_real * 100, color: C.accent, name: real }, { v: pl.naive_placebo * 100, color: C.dim, name: rnd }] },
+        { label: t("pl.infer"), bars: [{ v: pl.inference_real * 100, color: C.accent, name: real }, { v: pl.inference_placebo * 100, color: C.dim, name: rnd }] },
       ],
       max: 10, label: t("chart.placebo"),
-    }) + `<div class="legend"><span><i style="background:${C.accent}"></i>${real}</span><span><i style="background:#5b6b90"></i>${t("lg.placebo")}</span><span>${t("pl.players", { n: pl.n_players })}</span></div>`;
+    }) + `<div class="legend"><span><i style="background:${C.accent}"></i>${real}</span><span><i style="background:${C.dim}"></i>${t("lg.placebo")}</span><span>${t("pl.players", { n: pl.n_players })}</span></div>`;
   }
 
   /* ---------------- evidence ---------------- */
@@ -362,7 +384,7 @@
         rows: [
           { label: t("ct.direct"), est: c.effect_pp, lo: c.lo_pp, hi: c.hi_pp, color: C.accent, tip: t("ct.direct.tip") },
           { label: t("ct.shrunk"), est: c.shrunk_pp, lo: c.shrunk_pp - 1.96 * sd, hi: c.shrunk_pp + 1.96 * sd, color: C.blue, tip: t("ct.shrunk.tip") },
-          { label: t("ct.league"), est: S.heterogeneity.mu * 100, lo: S.heterogeneity.mu_lo * 100, hi: S.heterogeneity.mu_hi * 100, color: "#7d8aa8", tip: t("ct.league.tip") },
+          { label: t("ct.league"), est: S.heterogeneity.mu * 100, lo: S.heterogeneity.mu_lo * 100, hi: S.heterogeneity.mu_hi * 100, color: C.dim, tip: t("ct.league.tip") },
         ],
         xTitle: t("ax.long.minus.ref", { long: S.long, ref: REF() }), labelW: 150, label: t("chart.contrast"),
       });

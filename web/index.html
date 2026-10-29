@@ -7,9 +7,9 @@
   <meta name="description" content="NBA shooting fatigue analysis with statistical inference: consecutive minutes on court, zone maps and a simulator for new players.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <meta name="theme-color" content="#010f2e">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23010f2e'/%3E%3Cpath d='M10 12h14l18 20-18 20H10l18-20z' fill='%23ffffff'/%3E%3Cpath d='M34 12h14l10 12-10 12z' fill='%23536581'/%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#221c16">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23221c16'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23e8923f' stroke-width='3'/%3E%3Cpath d='M12 32h40M32 12v40' stroke='%23ece6da' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -30,6 +30,7 @@
       <symbol id="i-down" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
       <symbol id="i-up" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol>
       <symbol id="i-court"viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1"/><line x1="12" y1="4" x2="12" y2="20"/><circle cx="12" cy="12" r="3"/></symbol>
     </defs>
@@ -59,6 +60,7 @@
 
   <main class="wrap">
     <div id="load-error" class="alert hidden"></div>
+    <div class="backbar hidden" id="backbar"><button class="btn" id="back-btn"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg><span></span></button></div>
 
     <!-- SUMMARY -->
     <section id="summary" class="pane on">
@@ -81,7 +83,7 @@
       <div class="cta">
         <button class="btn primary" data-go="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="hero.cta1"></span></button>
         <button class="btn" data-go="uses"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="hero.cta3"></span></button>
-        <button class="btn" data-go="method"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="hero.cta2"></span></button>
+        <a class="btn" href="simulador/index.html"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="hero.cta2"></span></a>
       </div>
 
       <a class="scroll-cue" href="#tech"><span data-i18n="tech.cue"></span><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg></a>
