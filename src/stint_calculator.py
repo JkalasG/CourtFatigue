@@ -148,8 +148,9 @@ def assign_bucket(stint_minutes: float) -> str:
 
 
 def season_paths(season: str):
-    """Paths of the raw CSVs. Season '2024' is 2024-25 (convention of the source repository)."""
-    if season == "2024":
+    """Paths of the raw CSVs. Season '2024' is 2024-25 (convention of the source repository).
+    2024 lives in data/raw/ when present; otherwise it is read from data/raw/seasons/2024/ like the others."""
+    if season == "2024" and os.path.exists("data/raw/nbastats_2024.csv"):
         return "data/raw/nbastats_2024.csv", "data/raw/shotdetail_2024.csv"
     return f"data/raw/seasons/{season}/nbastats_{season}.csv", f"data/raw/seasons/{season}/shotdetail_{season}.csv"
 

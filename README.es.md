@@ -33,17 +33,54 @@ Una regla del tipo *"sustituir cuando el acierto cae 3 puntos en algún tramo co
 ### Robustez
 La pendiente por minuto resiste: excluir partidos decididos (diferencia ≥ 20), usar solo partidos parejos (≤ 10), controlar por minutos del partido, local o visitante, marcador y back-to-back, reiniciar el contador en cada cuarto e incluir los tiros con stint incierto (todas entre +0.09 y +0.11 pp/min con todos los tramos; tras calentar, +0.027).
 
+## Uso y beneficios para el cuerpo técnico
+
+CourtFatigue **no es un asistente para usar durante el partido**: es una herramienta para planificar y desmontar mitos. Dice dónde no gastar energía y dónde poner atención. En la web está en la pestaña **Uso y beneficios**.
+
+**Para qué sí sirve**
+
+| Uso | Qué hace el entrenador | En qué se apoya |
+| --- | --- | --- |
+| Rotar sin miedo al "cansancio de tiro" | Dejar más tiempo al mejor tirador si no hay otras razones (faltas, defensa, desgaste visible) para sacarlo | Hasta ~12 min seguidos el acierto no cae (+0.21 pp tras ≥ 8 min; IC −0.13 a +0.56) |
+| Preparar la entrada desde la banca | Primera jugada tras un cambio pensada para un tiro de ritmo, no uno difícil; activar al suplente antes de entrar (hipótesis a validar) | Arranque frío: −1.46 pp en los primeros 30 s, normal hacia el minuto 2 |
+| Dosificar en los back-to-back | Decidir a quién dar menos minutos en el segundo partido de dos días seguidos | Back-to-back: −0.39 pp (IC −0.67 a −0.11) |
+| No etiquetar a nadie como "el que se cansa" | Revisar a cada jugador con su margen de error en *Verificar jugadores* antes de cambiar su rol | 0 de 592 jugadores con caída comprobada |
+| Preparar el partido según el rival | Saber contra qué equipos se tira peor de lo esperado | Efecto defensivo por equipo, estable entre temporadas (r ≈ 0.52) |
+| Convencer a jugadores y directivos | Mostrar en el simulador 3D qué pesa en un tiro: el defensor y la distancia mucho, el cansancio casi nada | Panel "Qué pesa más en este tiro" |
+
+**Lo que no hace**
+
+- No funciona en vivo: no dice "sácalo ahora" durante el partido.
+- No mide el cansancio físico ni el riesgo de lesión, solo si el tiro entra. Para eso hacen falta datos de carga (GPS, frecuencia cardíaca).
+- No mide defensa, rebotes ni pérdidas, que el cansancio sí podría afectar.
+- No ve caídas pequeñas de un jugador concreto: solo de ≈ 14 pp o más.
+- No dice nada más allá de ~12 minutos seguidos: casi no hay datos ahí.
+
+> **En una frase:** ayuda al cuerpo técnico a rotar con datos en vez de intuición. El problema no está en cuándo sale un jugador, sino en cómo entra.
+
 ## Interfaz
 
-Pestañas: **Resumen** (con "En 30 segundos", panel para el cuerpo técnico y glosario en lenguaje llano) · **Jugador** (curva, IC, mapas descansado vs. cansado) · **Evidencia** (cobertura de datos, robustez, temporada por temporada, arranque frío, zonas, características, ranking defensivo) · **Jugador nuevo** (proyección con incertidumbre) · **Método** (+ simulador 3D).
+Pestañas: **Resumen** (arriba, la conclusión en lenguaje simple con sus cifras clave; al bajar, el detalle técnico, el panel para el cuerpo técnico y el glosario) · **Uso y beneficios** (cómo lo usa un entrenador y qué no hace) · **Verificar jugadores** (curva, IC, mapas descansado vs. cansado) · **Evidencia** (cobertura de datos, robustez, temporada por temporada, arranque frío, zonas, características, ranking defensivo) · **Jugador nuevo** (proyección con incertidumbre) · **Simulación 3D** (acceso al simulador + método).
 
-El idioma (inglés o español) se elige con el selector EN / ES de la barra superior; se recuerda en el navegador y se comparte con el simulador. También se puede forzar con `?lang=es` o `?lang=en`. La identidad visual sigue al hackatón AQX (azul marino, azul acero y blanco).
+El idioma (inglés o español) se elige con el selector EN / ES de la barra superior; se recuerda en el navegador y se comparte con el simulador. También se puede forzar con `?lang=es` o `?lang=en`. El diseño se inspira en una pizarra táctica: madera oscura, tinta blanco tiza y líneas finas de cancha en naranja como separadores.
 
 La página es estática (carpeta `web/`) y se publica sola en GitHub Pages. Cómo ejecutarla en tu computadora: ver [Instrucciones para clonar y ejecutar](#instrucciones-para-clonar-y-ejecutar), al final.
 
 Para el envío a Devpost: [docs/es/devpost_descripcion.md](docs/es/devpost_descripcion.md) (texto) y [docs/es/guion_video_2min.md](docs/es/guion_video_2min.md) (guion opcional). Descripción larga: [docs/es/descripcion_proyecto.md](docs/es/descripcion_proyecto.md).
 
 ## Simulador 3D (`web/simulador/`)
+
+### Para qué sirve en este análisis
+
+El simulador **no es un análisis aparte ni descubre nada nuevo**: reúne en un solo tiro los efectos que el análisis ya midió, para que se entiendan sin leer intervalos de confianza. Sirve para tres cosas:
+
+1. **Comparar el tamaño de cada efecto.** El panel *"Qué pesa más en este tiro"* muestra cuántos puntos de acierto suma o resta cada factor: distancia del tiro, defensor, equipo rival, arranque frío y cansancio. Al subir los minutos seguidos de 2 a 12, la barra del cansancio casi no se mueve; al acercar al defensor o alejar el tiro, la probabilidad cambia varios puntos. Es la conclusión principal del proyecto, vista de forma práctica.
+2. **Ver el arranque frío.** Con el jugador recién entrado (menos de 2 min), la probabilidad baja y luego vuelve a su nivel: es el único efecto de los minutos que sí aparece en los datos.
+3. **Explicarlo a quien no lee gráficos** (cuerpo técnico, jugadores, jurado): cada número sale de los datos, y lo que es solo ilustrativo (la posición de los otros cuatro defensores, la animación) está marcado como tal.
+
+Lo que **no** hace: no predice tiros reales de un partido ni mide la fatiga de un jugador concreto; la fatiga que usa es la pendiente promedio de la liga.
+
+### Cómo calcula la probabilidad
 
 La probabilidad de anotar se construye sumando términos medidos; nada está escrito a mano:
 
@@ -104,6 +141,13 @@ Los datos pasan por `src/` (cálculo del análisis), `scripts/` (empaquetado) y 
 
 ## Instrucciones para clonar y ejecutar
 
+**Requisitos**
+
+- **Git** y **Python 3** (probado con Python 3.14, pandas 3.1, NumPy 2.5 y scikit-learn 1.9).
+- **Node.js** solo para las pruebas del simulador (paso 4; probado con Node 24).
+- Para reproducir el análisis (paso 3): conexión a internet, unos **1.5 GB** libres en disco y unos **10 minutos**.
+- Ver la página (paso 2) no necesita instalar nada más que Python.
+
 **1. Clonar e instalar**
 
 ```bash
@@ -125,7 +169,7 @@ Hace falta un servidor local porque el navegador bloquea `fetch` desde `file://`
 **3. Reproducir el análisis desde cero** (opcional; descarga cientos de MB)
 
 ```bash
-python scripts/download_seasons.py 2021 2022 2023   # NBA 2021-22 a 2023-24 (la 2024-25 ya está en data/raw/)
+python scripts/download_seasons.py 2021 2022 2023 2024   # NBA 2021-22 a 2024-25 (de la 2024-25 el repo solo trae los tiros)
 python scripts/download_shot_logs.py                # 2014-15 con distancia al defensor (CC0)
 
 python src/stint_calculator.py 2021 2022 2023 2024  # ~3 min por temporada
@@ -141,7 +185,9 @@ python scripts/build_defense_data.py gap            # brecha de precisión con y
 ```bash
 python tests/test_fatigue_stats.py                  # 6 pruebas con datos sintéticos
 curl -o tests/three.min.js https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js
-node tests/test_simulator.js                        # modelo de probabilidad, defensores y física del tiro (178 comprobaciones)
+node tests/test_simulator.js                        # modelo de probabilidad, defensores y física del tiro (179 comprobaciones)
 ```
 
-`data/raw/nbastats_2024.csv` (94 MB) no se versiona; está comprimido como `.tar.xz`. Las temporadas adicionales, el dataset externo y los CSV procesados grandes se regeneran con los scripts y están en `.gitignore`.
+El play-by-play de 2024-25 (94 MB) no se versiona: `download_seasons.py ... 2024` lo baja a `data/raw/seasons/2024/` y `stint_calculator.py` lo lee de ahí si no está en `data/raw/nbastats_2024.csv`. Las temporadas adicionales, el dataset externo y los CSV procesados grandes se regeneran con los scripts y están en `.gitignore`.
+
+**Resultado esperado.** Siguiendo estos pasos en una copia limpia del repositorio se obtienen exactamente los mismos archivos de `web/data/` (resultados, jugadores, mapas de tiro, defensa y calidad de datos) y el mismo informe de calidad. La única diferencia posible está en el quinto decimal de las métricas del modelo logístico, que solo sirve de comparación y no se usa en el análisis; depende de la versión de scikit-learn.

@@ -21,7 +21,7 @@ raw data  ─►  src/  ─►  processed data  ─►  scripts/  ─►  web/da
 | **`src/`** | `stint_calculator.py` · `xshot_model.py` · `fatigue_stats.py` | **Where data become analysis** (see below) |
 | `scripts/` | `download_seasons.py` · `download_shot_logs.py` · `data_quality.py` · `build_web_data.py` · `build_defense_data.py` | Download data, audit its quality and package the results as JSON for the web |
 | `web/` | `index.html` · `css/` · `js/` · `assets/` · `data/` · `simulador/` | The page (no libraries) and the 3D simulator. They calculate nothing: they read the JSON |
-| `tests/` | `test_fatigue_stats.py` (6 tests) · `test_simulator.js` (178 checks) | Verify the statistics do not invent effects and the simulator is coherent |
+| `tests/` | `test_fatigue_stats.py` (6 tests) · `test_simulator.js` (179 checks) | Verify the statistics do not invent effects and the simulator is coherent |
 | `docs/` | Devpost text, video script, project description (English) and `docs/es/` (Spanish) | Submission material |
 | `.github/workflows/` | `pages.yml` | Publishes `web/` to GitHub Pages on every push to `main` |
 | `logos/` | Hackathon graphic material | Origin of the logos in `web/assets/` |

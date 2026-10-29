@@ -21,7 +21,7 @@ datos crudos  ─►  src/  ─►  datos procesados  ─►  scripts/  ─►  
 | **`src/`** | `stint_calculator.py` · `xshot_model.py` · `fatigue_stats.py` | **Aquí se convierte el dato en análisis** (ver abajo) |
 | `scripts/` | `download_seasons.py` · `download_shot_logs.py` · `data_quality.py` · `build_web_data.py` · `build_defense_data.py` | Descargan datos, auditan su calidad y empaquetan los resultados en JSON para la web |
 | `web/` | `index.html` · `css/` · `js/` · `assets/` · `data/` · `simulador/` | La página (sin librerías) y el simulador 3D. No calculan nada: leen los JSON |
-| `tests/` | `test_fatigue_stats.py` (6 pruebas) · `test_simulator.js` (178 comprobaciones) | Verifican que la estadística no invente efectos y que el simulador sea coherente |
+| `tests/` | `test_fatigue_stats.py` (6 pruebas) · `test_simulator.js` (179 comprobaciones) | Verifican que la estadística no invente efectos y que el simulador sea coherente |
 | `docs/` | Texto para Devpost, guion del video y descripción del proyecto (inglés) y `docs/es/` (español) | Material de la entrega |
 | `.github/workflows/` | `pages.yml` | Publica `web/` en GitHub Pages en cada push a `main` |
 | `logos/` | Material gráfico del hackatón | Origen de los logos de `web/assets/` |

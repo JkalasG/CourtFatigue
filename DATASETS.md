@@ -8,7 +8,7 @@ Which data the project uses, where they come from, how to download them and what
 
 | Dataset | Content | Size | Source and download | License / use | How to get it in the project | What it is used for |
 |---|---|---|---|---|---|---|
-| **Shots** `shotdetail_<year>` | Every field-goal attempt: player, team, period, clock, position (x, y), distance, zone, shot type and whether it went in. 4 seasons: 2021-22 to 2024-25 (the file year is the starting year) | ≈ 44 MB per season (≈ 217 thousand shots) | Repository [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data/tree/main/datasets), files `shotdetail_<year>.tar.xz`. Origin: NBA Stats API (`ShotChartDetail`) | NBA data, redistributed for non-commercial use | `python scripts/download_seasons.py 2021 2022 2023` (2024 already ships in `data/raw/`) | Expected shot (xShot) and unit of analysis |
+| **Shots** `shotdetail_<year>` | Every field-goal attempt: player, team, period, clock, position (x, y), distance, zone, shot type and whether it went in. 4 seasons: 2021-22 to 2024-25 (the file year is the starting year) | ≈ 44 MB per season (≈ 217 thousand shots) | Repository [shufinskiy/nba_data](https://github.com/shufinskiy/nba_data/tree/main/datasets), files `shotdetail_<year>.tar.xz`. Origin: NBA Stats API (`ShotChartDetail`) | NBA data, redistributed for non-commercial use | `python scripts/download_seasons.py 2021 2022 2023 2024` | Expected shot (xShot) and unit of analysis |
 | **Play-by-play** `nbastats_<year>` | Every play of the game: substitutions, shots, score and clock | ≈ 94–105 MB per season | The same repository, files `nbastats_<year>.tar.xz`. Origin: NBA Stats API (`PlayByPlayV2`) | Same as above | Same as above | Rebuild consecutive minutes on court and the score |
 | **NBA shot logs 2014-15** | 128,069 shots with nearest-defender distance, defender name, shot clock, touch time and dribbles. Only through 4 Mar 2015 | ≈ 17 MB | [Kaggle: NBA shot logs](https://www.kaggle.com/datasets/dansbecker/nba-shot-logs) and its mirror on [OpenML](https://www.openml.org/search?type=data&q=nba-shot-logs), from which the script downloads it | CC0 (public domain) | `python scripts/download_shot_logs.py` | Defender-distance effect in the simulator (another era: see limitations) |
 
@@ -22,12 +22,12 @@ Direct download of the first two: `https://raw.githubusercontent.com/shufinskiy/
 |---|---|---|---|
 | `data/processed/by_season/stints_<year>.csv` | `src/stint_calculator.py` | The season's shots with consecutive minutes on court, minutes played, score margin and home/away (≈ 59 MB per season) | Input of the next step |
 | `data/processed/shots_fatigue_processed.csv` | `src/xshot_model.py` | The 4 seasons together, 872,158 shots, with expected shot (`xShot`) and residual (actual − expected) (≈ 150 MB) | All the statistics |
-| `data/processed/xshot_metrics.json` | `src/xshot_model.py` | Quality of the expected-shot model (game-grouped and temporal validation) | Method tab |
-| `web/data/summary.json` | `scripts/build_web_data.py` | Population results: effects, robustness, replication, cold start, placebo, power | Summary, Evidence and Method tabs |
-| `web/data/players.json` and `web/data/shots/<id>.json` | `scripts/build_web_data.py` | 643 players: curves by minute, shot maps and individual shots | Player tab and simulator |
+| `data/processed/xshot_metrics.json` | `src/xshot_model.py` | Quality of the expected-shot model (game-grouped and temporal validation) | 3D simulation tab (method) |
+| `web/data/summary.json` | `scripts/build_web_data.py` | Population results: effects, robustness, replication, cold start, placebo, power | Summary, Evidence and 3D simulation (method) tabs |
+| `web/data/players.json` and `web/data/shots/<id>.json` | `scripts/build_web_data.py` | 643 players: curves by minute, shot maps and individual shots | Check players tab and simulator |
 | `web/data/defense.json` | `scripts/build_defense_data.py` | Defensive effect by rival team (2024-25) | Evidence tab and simulator |
 | `web/data/contest.json` and `web/data/distance.json` | `scripts/build_defense_data.py` | Defender-distance effect and accuracy-by-shot-distance curve | Simulator |
-| `web/data/quality.json` | `scripts/data_quality.py` | Result of the data-quality audit | Method tab |
+| `web/data/quality.json` | `scripts/data_quality.py` | Result of the data-quality audit | 3D simulation tab (method) |
 
 The files in `web/data/` are uploaded to the repository (the whole `web/` folder weighs about 15 MB) because the page reads them directly. Those in `data/` are regenerable and are in `.gitignore`.
 

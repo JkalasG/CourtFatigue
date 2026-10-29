@@ -13,11 +13,14 @@ if (!fs.existsSync(threePath)) { console.error('three.min.js is missing: see the
 global.THREE = require(threePath);
 const J = (f) => JSON.parse(fs.readFileSync(path.join(root, 'web', 'data', f), 'utf8'));
 
-// The defense and trajectory blocks of the simulator are delimited by markers in the HTML
+// The probability-model and trajectory blocks of the simulator are delimited by @test-block markers in the HTML
 const html = fs.readFileSync(path.join(root, 'web', 'simulador', 'index.html'), 'utf8');
-const block = html.slice(html.indexOf('// <<DEFENSA'), html.indexOf('// DEFENSA>>')) + ' ' +
-              html.slice(html.indexOf('// <<TRAYECTORIA'), html.indexOf('// TRAYECTORIA>>'));
-if (!block) { console.error('The DEFENSA block was not found in the simulator'); process.exit(2); }
+const between = (name) => {
+  const a = html.indexOf('// @test-block ' + name), b = html.indexOf('// @end-test-block ' + name);
+  if (a < 0 || b < 0) { console.error(`The ${name} block was not found in the simulator`); process.exit(2); }
+  return html.slice(a, b);
+};
+const block = between('probability-model') + ' ' + between('trajectory');
 
 const els = {};
 global.document = { getElementById: (id) => (els[id] = els[id] || { value: '2.5', textContent: '' }) };
@@ -77,7 +80,7 @@ ok(p0.cold === -1.46 && p3.cold === 0 && Math.abs(p3.final - p0.final - 1.46) < 
 // 5) Defender geometry in every shot spot
 buildDefenders(); DEF.auto = false;
 ok(defendersGroup.children.length === 5, '5 defenders');
-const zones = { top3: [0, 2.2], corner3_r: [6.2, -5.0], wing3: [4.8, -0.5], midrange: [-3.5, -1.0], freethrow: [0, -0.9], paint: [0.6, -3.4] };
+const zones = { top3: [0, 2.2], corner3_r: [6.86, -5.2], wing3: [5.2, -0.3], midrange: [-3.5, -1.0], freethrow: [0, -0.9], paint: [0.6, -3.4] };
 for (const [name, [x, z]] of Object.entries(zones)) {
   global.currentShooterPos = { x, z };
   for (const ft of [1.5, 4, 8]) {
@@ -104,7 +107,7 @@ ok(box.max.y > 1.85 && box.max.y < 2.15, 'defender height ~1.95 m');
 // 6) Ball trajectory: physical parabola to the hoop
 const HOOP_Y = 3.05;
 const target = new THREE.Vector3(HOOP_X, HOOP_Y + 0.05, HOOP_Z);
-const spots = { top3: [0, 2.2], corner3_r: [6.2, -5.0], wing3: [4.8, -0.5], midrange: [-3.5, -1.0], freethrow: [0, -0.9], paint: [0.6, -3.4] };
+const spots = { top3: [0, 2.2], corner3_r: [6.86, -5.2], wing3: [5.2, -0.3], midrange: [-3.5, -1.0], freethrow: [0, -0.9], paint: [0.6, -3.4] };
 for (const [name, [x, z]] of Object.entries(spots)) {
   const start = new THREE.Vector3(x, 2.45, z);
   const m = launchModel(start, target);
