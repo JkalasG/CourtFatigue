@@ -27,7 +27,11 @@
       <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
       <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
-      <symbol id="i-court" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1"/><line x1="12" y1="4" x2="12" y2="20"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol>
+      <symbol id="i-court"viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="1"/><line x1="12" y1="4" x2="12" y2="20"/><circle cx="12" cy="12" r="3"/></symbol>
     </defs>
   </svg>
 
@@ -39,10 +43,11 @@
       </a>
       <nav class="tabs" id="tabs" role="tablist">
         <button role="tab" data-tab="summary" class="on"><svg class="ic" aria-hidden="true"><use href="#i-summary"/></svg><span data-i18n="nav.summary"></span></button>
+        <button role="tab" data-tab="uses"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="nav.uses"></span></button>
         <button role="tab" data-tab="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="nav.player"></span></button>
         <button role="tab" data-tab="evidence"><svg class="ic" aria-hidden="true"><use href="#i-evidence"/></svg><span data-i18n="nav.evidence"></span></button>
         <button role="tab" data-tab="new"><svg class="ic" aria-hidden="true"><use href="#i-new"/></svg><span data-i18n="nav.new"></span></button>
-        <button role="tab" data-tab="method"><svg class="ic" aria-hidden="true"><use href="#i-method"/></svg><span data-i18n="nav.method"></span></button>
+        <button role="tab" data-tab="method"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="nav.method"></span></button>
       </nav>
       <div class="lang" id="lang-switch" role="group" aria-label="Language">
         <svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg>
@@ -57,21 +62,34 @@
 
     <!-- SUMMARY -->
     <section id="summary" class="pane on">
-      <div class="banner" role="img" aria-label="AQX Analytics Hackathon">
-        <span class="tag-devpost"><span data-i18n="banner.on"></span> <img src="assets/devpost-logo.svg" alt="Devpost"></span>
-      </div>
-
-      <div class="hero">
-        <p class="eyebrow"><img src="assets/aqx-logo.png" alt="AQX Analytics Hackathon"><span>Sports Analytics Data Bowl 4.0 · <span id="season">NBA</span></span></p>
-        <h1 data-i18n-html="hero.h1"></h1>
-        <p class="lede" id="hero-lede" data-i18n="hero.loading"></p>
-        <div class="cta">
-          <button class="btn primary" data-go="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="hero.cta1"></span></button>
-          <button class="btn" data-go="new"><svg class="ic" aria-hidden="true"><use href="#i-new"/></svg><span data-i18n="hero.cta2"></span></button>
+      <div class="hero-row">
+        <div class="hero">
+          <p class="eyebrow"><img src="assets/aqx-logo.png" alt="AQX Analytics Hackathon"><span>Sports Analytics Data Bowl 4.0 · <span id="season">NBA</span></span></p>
+          <p class="hx-q" data-i18n="hx.q"></p>
+          <h1 id="hx-answer" data-i18n="hero.loading"></h1>
+          <p class="lede" id="hx-sub"></p>
         </div>
+        <div class="hero-art" id="hero-art"></div>
       </div>
 
-      <div class="card plain" id="plain"></div>
+      <div class="facts" id="facts"></div>
+
+      <div class="card stint" id="stint"></div>
+
+      <p class="takeaway" id="takeaway"></p>
+
+      <div class="cta">
+        <button class="btn primary" data-go="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="hero.cta1"></span></button>
+        <button class="btn" data-go="uses"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="hero.cta3"></span></button>
+        <button class="btn" data-go="method"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="hero.cta2"></span></button>
+      </div>
+
+      <a class="scroll-cue" href="#tech"><span data-i18n="tech.cue"></span><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg></a>
+
+      <div class="tech-head" id="tech">
+        <h2 data-i18n="tech.title"></h2>
+        <p class="lede" id="hero-lede"></p>
+      </div>
 
       <div class="grid kpis" id="hero-kpis"></div>
 
@@ -93,6 +111,20 @@
       </div>
 
       <details class="card glossary" id="glossary"></details>
+    </section>
+
+    <!-- USES AND BENEFITS -->
+    <section id="uses" class="pane">
+      <div class="hero">
+        <p class="hx-q" data-i18n="u.kicker"></p>
+        <h1 data-i18n-html="u.h1"></h1>
+        <p class="lede" data-i18n="u.lede"></p>
+      </div>
+      <h2 class="u-h"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-i18n="u.yes.h"></span></h2>
+      <div class="uses" id="uses-yes"></div>
+      <h2 class="u-h no"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg><span data-i18n="u.no.h"></span></h2>
+      <div class="card u-no"><ul id="uses-no"></ul></div>
+      <p class="takeaway" data-i18n-html="u.take"></p>
     </section>
 
     <!-- PLAYER -->
@@ -242,6 +274,8 @@
       <div class="card prose" id="method-text"></div>
     </section>
   </main>
+
+  <button class="to-top" id="to-top" data-i18n-title="tech.top" aria-label="Top"><svg class="ic" aria-hidden="true"><use href="#i-up"/></svg></button>
 
   <footer class="foot wrap">
     <div class="brands">

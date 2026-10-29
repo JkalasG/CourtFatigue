@@ -51,9 +51,14 @@
   }
   function bindTabs() {
     $$("#tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.tab)));
-    $$("[data-go]").forEach((b) => b.addEventListener("click", () => show(b.dataset.go)));
+    document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) show(g.dataset.go); });
     window.addEventListener("hashchange", () => show(location.hash.slice(1)));
     $$("#lang-switch button").forEach((b) => b.addEventListener("click", () => window.I18N.set(b.dataset.lang)));
+    // Scroll cue and back-to-top must not touch the hash (it drives the tabs)
+    $(".scroll-cue").addEventListener("click", (e) => { e.preventDefault(); $("#tech").scrollIntoView({ behavior: "smooth" }); });
+    const top = $("#to-top");
+    top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    window.addEventListener("scroll", () => top.classList.toggle("on", window.scrollY > 600), { passive: true });
   }
 
   const kpi = (l, v, d, cls = "") => `<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d || ""}</div></div>`;
@@ -77,16 +82,106 @@
   /* ---------------- plain language ---------------- */
   function coldRow(label) { return (S.cold_start || []).find((r) => r.label === label && r.effect_pp != null); }
 
-  function renderPlain() {
-    const h = S.heterogeneity, mu = h.mu * 100, lo = h.mu_lo * 100, hi = h.mu_hi * 100, c0 = coldRow("0–30 s"), c1 = coldRow("1–2 min");
-    const found = hi < 0 ? t("plain.found.drop", { x: Math.abs(mu).toFixed(1) })
-      : lo > 0 ? t("plain.found.up", { x: mu.toFixed(1) }) : t("plain.found.none", { x: Math.abs(lo).toFixed(1) });
-    $("#plain").innerHTML =
-      `<h3>${icon("clock")}${t("plain.title")}</h3><div class="plain-grid">` +
-      `<div><span class="step">1</span><h4>${t("plain.q.h")}</h4><p>${t("plain.q.p")}</p></div>` +
-      `<div><span class="step">2</span><h4>${t("plain.f.h")}</h4><p>${found}` +
-      (c0 ? t("plain.cold", { x: Math.abs(c0.effect_pp).toFixed(1) }) + (c1 ? t("plain.cold2") : "") + "." : "") + `</p></div>` +
-      `<div><span class="step">3</span><h4>${t("plain.m.h")}</h4><p>${t("plain.m.p", { n: S.seasons.length })}</p></div></div>`;
+  function renderSimple() {
+    const h = S.heterogeneity, drop = h.mu_hi < 0, c0 = coldRow("0–30 s");
+    const cc = S.slopes.con_controles || [], b2b = cc.find((r) => r.term === "b2b"), home = cc.find((r) => r.term === "is_home");
+    $("#hx-answer").innerHTML = t(drop ? "hx.a.yes" : "hx.a.no");
+    $("#hx-sub").textContent = t("hx.sub", { shots: num(S.n_shots), games: num(S.n_games), long: S.long });
+
+    const fact = (cls, big, unit, l, d) =>
+      `<div class="fact ${cls}"><div class="big">${big}<small>${unit}</small></div><div class="l">${l}</div><p>${d}</p></div>`;
+    $("#facts").innerHTML =
+      fact(S.n_flagged ? "bad" : "good", S.n_flagged, " " + t("of") + " " + S.n_contrast_players, t("hx.f1.l"),
+        t(S.n_flagged ? "hx.f1.d.some" : "hx.f1.d")) +
+      (c0 ? fact("bad", fmt(c0.effect_pp, 1), " " + t("hx.pts"), t("hx.f2.l"), t("hx.f2.d")) : "") +
+      (b2b ? fact("warn", fmt(b2b.coef_pp, 1), " " + t("hx.pts"), t("hx.f3.l"),
+        t("hx.f3.d") + (home ? " " + t("hx.f3.home", { x: fmt(home.coef_pp, 1) }) : "")) : "");
+
+    // One stint on court: cold start buckets, then the warmed-up stretch up to ~12 min
+    const segs = (S.cold_start || []).filter((r) => r.group === "Time since entering" && r.effect_pp != null && !/reference/.test(r.label))
+      .map((r) => ({ label: tl(r.label), v: r.effect_pp, cold: r.hi_pp < 0, w: 1 }));
+    segs.push({ label: t("hx.seg.warm", { long: S.long }), v: h.mu * 100, cold: false, warm: true, w: 4 });
+    $("#stint").innerHTML =
+      `<h3>${icon("clock")}${t("hx.stint.t")}</h3><p class="sub">${t("hx.stint.s")}</p><div class="timeline">` +
+      segs.map((s) => `<div class="seg ${s.cold ? "cold" : "ok"}" style="flex:${s.w}">` +
+        `<div class="v">${s.warm ? t("hx.normal") : fmt(s.v, 1) + " " + t("hx.pts")}</div><div class="bar"></div><div class="t">${s.label}</div></div>`).join("") +
+      `</div><div class="tl-axis"><span>${t("hx.enter")}</span><span>${t("hx.leave")}</span></div>`;
+    $("#takeaway").innerHTML = t(drop ? "hx.take.yes" : "hx.take");
+    renderHeroArt();
+  }
+
+  // Half court with an animated shot, plus a sparkline of accuracy by consecutive minutes (real buckets up to ~12 min)
+  function renderHeroArt() {
+    const k = 7, cx = 190, base = 20, rimY = base + 5.25 * k;            // 7 px per foot
+    const cornerY = rimY + Math.sqrt(23.75 ** 2 - 22 ** 2) * k, laneY = base + 19 * k;
+    // deterministic scatter of made / missed shots
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    let dots = "";
+    for (let i = 0; i < 46; i++) {
+      const a = (rnd() - 0.5) * Math.PI * 0.76, r = (i % 3 === 0 ? 2 + rnd() * 6 : i % 3 === 1 ? 10 + rnd() * 8 : 23.5 + rnd() * 3) * k;
+      const x = cx + Math.sin(a) * r, y = rimY + Math.cos(a) * r, made = rnd() < 0.47;
+      dots += made ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4" class="ha-made"/>`
+        : `<path d="M${(x - 3).toFixed(1)} ${(y - 3).toFixed(1)}l6 6m0-6l-6 6" class="ha-miss"/>`;
+    }
+    const sx = cx + 25 * Math.sin(0.62) * k, sy = rimY + 25 * Math.cos(0.62) * k;   // shooter on the right wing
+    const shot = `M${sx.toFixed(1)} ${sy.toFixed(1)} Q${(sx + 40).toFixed(1)} ${(rimY + 40).toFixed(1)} ${cx} ${rimY}`;
+
+    // sparkline card
+    const b = S.buckets.filter((r) => r.hi_edge <= 12), X0 = 40, X1 = 340, Y0 = 400, ys = 13;
+    const px = (i) => X0 + (i + 0.5) * (X1 - X0) / b.length, py = (v) => Y0 - v * ys;
+    const band = b.map((r, i) => `${px(i).toFixed(1)},${py(r.hi_pp).toFixed(1)}`).join(" ") + " " +
+      b.slice().reverse().map((r, j) => `${px(b.length - 1 - j).toFixed(1)},${py(r.lo_pp).toFixed(1)}`).join(" ");
+    const line = b.map((r, i) => `${i ? "L" : "M"}${px(i).toFixed(1)} ${py(r.effect_pp).toFixed(1)}`).join("");
+    const pts = b.map((r, i) => `<circle cx="${px(i).toFixed(1)}" cy="${py(r.effect_pp).toFixed(1)}" r="4" class="${r.hi_pp < 0 ? "ha-cold" : "ha-pt"}"/>`).join("");
+    const c0 = b[0];
+
+    $("#hero-art").innerHTML = `<svg viewBox="0 0 380 470" role="img" aria-label="${esc(t("art.title"))}">
+      <g class="ha-court">
+        <rect x="15" y="${base}" width="350" height="280" rx="4"/>
+        <rect x="${cx - 56}" y="${base}" width="112" height="${laneY - base}"/>
+        <circle cx="${cx}" cy="${laneY}" r="42"/>
+        <path d="M${cx - 28} ${rimY} a28 28 0 0 0 56 0"/>
+        <path d="M${cx - 154} ${base} V${cornerY.toFixed(1)} A${23.75 * k} ${23.75 * k} 0 0 0 ${cx + 154} ${cornerY.toFixed(1)} V${base}"/>
+        <path d="M15 300 H365" />
+        <path d="M${cx - 42} 300 a42 42 0 0 1 84 0"/>
+      </g>
+      ${dots}
+      <line x1="${cx - 21}" y1="${base + 4 * k}" x2="${cx + 21}" y2="${base + 4 * k}" class="ha-board"/>
+      <circle cx="${cx}" cy="${rimY}" r="6.5" class="ha-rim"/>
+      <path id="ha-shot" d="${shot}" class="ha-arc"/>
+      <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="9" class="ha-shooter"/>
+      ${matchMedia("(prefers-reduced-motion: reduce)").matches ? `<circle cx="${cx}" cy="${rimY}" r="6" class="ha-ball"/>`
+        : `<circle r="6" class="ha-ball"><animateMotion dur="2.4s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.6;1" calcMode="linear"><mpath href="#ha-shot"/></animateMotion></circle>`}
+      <g class="ha-card">
+        <rect x="12" y="318" width="356" height="140" rx="12"/>
+        <text x="28" y="343" class="ha-title">${esc(t("art.title"))}</text>
+        <line x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}" class="ha-zero"/>
+        <polygon points="${band}" class="ha-band"/>
+        <path d="${line}" class="ha-line"/>
+        ${pts}
+        <text x="${px(0)}" y="${py(c0.lo_pp) + 16}" text-anchor="middle" class="ha-cold-t">${esc(t("art.cold"))}</text>
+        <text x="${X1}" y="${Y0 - 26}" text-anchor="end" class="ha-flat">${esc(t("art.flat"))}</text>
+        <text x="${X0}" y="448" class="ha-ax">${esc(t("art.enter"))}</text>
+        <text x="${X1}" y="448" text-anchor="end" class="ha-ax">${esc(t("art.min", { m: b[b.length - 1].hi_edge }))}</text>
+      </g>
+    </svg>`;
+  }
+
+  /* ---------------- uses and benefits ---------------- */
+  function renderUses() {
+    const h = S.heterogeneity, c0 = coldRow("0–30 s");
+    const b2b = (S.slopes.con_controles || []).find((r) => r.term === "b2b");
+    const v = { mu: fmt(h.mu * 100, 2), long: S.long, c0: c0 ? fmt(c0.effect_pp, 1) : "—", b2b: b2b ? fmt(b2b.coef_pp, 2) : "—",
+      f: S.n_flagged, n: S.n_contrast_players, mde: S.power.mde_pp.toFixed(0) };
+    const yes = [["rot", "clock", "evidence"], ["entry", "arrow", "evidence"], ["b2b", "clipboard", "evidence"],
+      ["label", "player", "player"], ["rival", "court", "evidence"], ["sim", "cube", "method"]];
+    $("#uses-yes").innerHTML = yes.map(([k, ic, go], i) =>
+      `<div class="use"><div class="use-top"><span class="step">${i + 1}</span>${icon(ic)}</div>` +
+      `<h3>${t("u." + k + ".t")}</h3><p>${t("u." + k + ".d", v)}</p>` +
+      `<button class="btn" data-go="${go}">${t("u.go." + go)}${icon("arrow")}</button></div>`).join("");
+    $("#uses-no").innerHTML = ["live", "load", "other", "small", "long"]
+      .map((k) => `<li>${icon("x")}<span>${t("u.no." + k, v)}</span></li>`).join("");
   }
 
   function renderCoach() {
@@ -122,7 +217,7 @@
       kpi(t("kpi.flag"), `${S.n_flagged} <small style="font-size:.5em;color:var(--muted)">${t("of")} ${S.n_contrast_players}</small>`, t("kpi.flag.d"), S.n_flagged ? "bad" : "") +
       kpi(t("kpi.cold"), c0 ? fmt(c0.effect_pp, 1) + " pp" : "—", c0 ? t("kpi.cold.d", { lo: fmt(c0.lo_pp, 1), hi: fmt(c0.hi_pp, 1) }) : "", "bad") +
       kpi(t("kpi.shots"), num(S.n_shots_analysis), t("kpi.shots.d", { games: num(S.n_games), players: num(S.n_players) }));
-    renderPlain(); renderCoach(); renderGlossary();
+    renderSimple(); renderUses(); renderCoach(); renderGlossary();
     $("#verdict").className = "card verdict " + v.cls;
     $("#verdict").innerHTML = `<h3>${esc(v.title)} <span class="badge ${v.cls}">${esc(v.badge)}</span></h3><p>${v.text}</p>`;
 
