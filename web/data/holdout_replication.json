@@ -1,0 +1,84 @@
+{
+ "preregistration_commit": "77aa9f738b5ee23ff68f3701018092b96677a151",
+ "preregistration_date": "2026-10-29T21:51:25-04:00",
+ "seasons_tested": [
+  "2025-26"
+ ],
+ "games": 1230,
+ "shots": 219156,
+ "shots_analysis": 218326,
+ "inferred_share": 0.00379,
+ "adapter": {
+  "subs": 64706,
+  "unresolved": 468,
+  "ambiguous": 663
+ },
+ "cold_start": {
+  "0–30 s": {
+   "frozen": -1.45954,
+   "frozen_ci95": [
+    -1.94513,
+    -0.97394
+   ],
+   "new": -1.35231,
+   "ci95": [
+    -2.24137,
+    -0.46324
+   ],
+   "ci95_game_bootstrap": [
+    -2.23728,
+    -0.46323
+   ],
+   "n": 11244
+  },
+  "30–60 s": {
+   "frozen": -0.50006,
+   "frozen_ci95": [
+    -0.88417,
+    -0.11594
+   ],
+   "new": -0.30737,
+   "ci95": [
+    -1.05872,
+    0.44397
+   ],
+   "ci95_game_bootstrap": [
+    -1.02217,
+    0.41684
+   ],
+   "n": 15598
+  },
+  "1–2 min": {
+   "frozen": -0.38637,
+   "frozen_ci95": [
+    -0.65457,
+    -0.11818
+   ],
+   "new": 0.00431,
+   "ci95": [
+    -0.44739,
+    0.456
+   ],
+   "ci95_game_bootstrap": [
+    -0.51238,
+    0.52585
+   ],
+   "n": 32372
+  }
+ },
+ "fatigue_8plus_vs_2_6": {
+  "frozen": 0.21,
+  "frozen_ci95": [
+   -0.13,
+   0.56
+  ],
+  "new": 0.31384,
+  "ci95": [
+   -0.47701,
+   1.1047
+  ],
+  "players": 343
+ },
+ "verdict": "replicated",
+ "fatigue_near_zero": true
+}

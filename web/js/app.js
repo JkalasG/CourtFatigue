@@ -15,6 +15,8 @@
   let DEFR = null;        // team defensive effect
   let CONT = null;        // defender distance (2014-15)
   let QUAL = null;        // data-quality audit
+  let X = null;           // extra analyses: impact, shot type, selection bias, free throws, bench time, team audit
+  let H = null;           // preregistered replication on 2025-26
   let P = [];             // players
   let cur = null;         // selected player
   let ready = false;
@@ -32,6 +34,8 @@
         [DEFR, CONT] = await Promise.all([fetch("data/defense.json").then((r) => r.json()), fetch("data/contest.json").then((r) => r.json())]);
       } catch (e) { DEFR = null; CONT = null; }
       try { QUAL = await fetch("data/quality.json").then((r) => r.json()); } catch (e) { QUAL = null; }
+      try { X = await fetch("data/extra.json").then((r) => r.json()); } catch (e) { X = null; }
+      try { H = await fetch("data/holdout_replication.json").then((r) => r.json()); } catch (e) { H = null; }
     } catch (e) {
       const box = $("#load-error");
       box.classList.remove("hidden");
@@ -43,20 +47,34 @@
 
   /* ---------------- tabs ---------------- */
   let backTo = null;       // where the "back" bar returns to: {tab, el}
-  function show(tab) {
-    if (!$("#" + tab)) tab = "summary";
+  // Old and inner destinations -> [tab, tool, element to land on]; links and bookmarks keep working
+  const ROUTES = { card: ["staff", null, "sec-card"], uses: ["staff", null, "sec-uses"], calc: ["tools", "calc"],
+    player: ["tools", "player"], new: ["tools", "new"], audit: ["evidence", null, "ch-teams"] };
+  function setTool(tool) {
+    $$("#toolbar .tool-btn").forEach((b) => b.classList.toggle("on", b.dataset.tool === tool));
+    $$("#tools .tool").forEach((p) => p.classList.toggle("on", p.id === "tool-" + tool));
+  }
+  // push = a click by the reader, so the browser's Back button returns to the previous tab
+  function show(name, push) {
+    const [tab, tool, focus] = ROUTES[name] || [name];
+    const pane = $("#" + tab);
+    if (!pane || !pane.classList.contains("pane")) return show("summary");
     $("#backbar").classList.add("hidden");
     $$(".pane").forEach((p) => p.classList.toggle("on", p.id === tab));
     $$("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
-    if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    if (tool) setTool(tool);
+    if (location.hash !== "#" + name) history[push ? "pushState" : "replaceState"](null, "", "#" + name);
+    try { sessionStorage.setItem("cf.route", name); } catch (e) {}
+    const target = focus && $("#" + focus);
+    if (target) target.scrollIntoView({ block: "start", behavior: "instant" });
+    else window.scrollTo({ top: 0, behavior: "instant" });
   }
   function bindTabs() {
-    $$("#tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.tab)));
+    $$("#tabs button").forEach((b) => b.addEventListener("click", () => show(b.dataset.tab, true)));
     document.addEventListener("click", (e) => {
       const g = e.target.closest("[data-go]");
       if (!g) return;
-      show(g.dataset.go);
+      show(g.dataset.go, true);
       // links out of "Uses & benefits" land on the supporting chart and offer a way back
       if (g.dataset.from) {
         backTo = { tab: g.dataset.from, el: g.closest(".use") };
@@ -70,10 +88,17 @@
     $("#back-btn").addEventListener("click", () => {
       if (!backTo) return;
       const { tab, el } = backTo;
-      show(tab);
+      show(tab, true);
       if (el) el.scrollIntoView({ block: "center", behavior: "instant" });
     });
     window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+    // switching tools keeps the reader where they are: the panel opens right under the cards
+    $$("#toolbar .tool-btn").forEach((b) => b.addEventListener("click", () => {
+      setTool(b.dataset.tool);
+      history.replaceState(null, "", "#" + b.dataset.tool);
+      try { sessionStorage.setItem("cf.route", b.dataset.tool); } catch (e) {}
+    }));
+    $$("#ev-index button").forEach((b) => b.addEventListener("click", () => $("#" + b.dataset.jump).scrollIntoView({ behavior: "smooth" })));
     $$("#lang-switch button").forEach((b) => b.addEventListener("click", () => window.I18N.set(b.dataset.lang)));
     // Scroll cue and back-to-top must not touch the hash (it drives the tabs)
     $(".scroll-cue").addEventListener("click", (e) => { e.preventDefault(); $("#tech").scrollIntoView({ behavior: "smooth" }); });
@@ -107,16 +132,25 @@
     const h = S.heterogeneity, drop = h.mu_hi < 0, c0 = coldRow("0–30 s");
     const cc = S.slopes.con_controles || [], b2b = cc.find((r) => r.term === "b2b"), home = cc.find((r) => r.term === "is_home");
     $("#hx-answer").innerHTML = t(drop ? "hx.a.yes" : "hx.a.no");
-    $("#hx-sub").textContent = t("hx.sub", { shots: num(S.n_shots), games: num(S.n_games), long: S.long });
+    $("#hx-sub").textContent = t(H && H.verdict === "replicated" ? "hx.sub.rep" : "hx.sub",
+      { shots: num(S.n_shots), games: num(S.n_games), long: S.long, pts: X ? Math.abs(X.impact.cold.total.pts).toFixed(0) : "—" });
+    const ci = X && X.impact.cold.total, bi = X && X.impact.b2b;
+    const coldCost = ci ? " " + t("hx.f2.cost", { pts: Math.abs(ci.pts).toFixed(0), lo: Math.abs(ci.hi).toFixed(0), hi: Math.abs(ci.lo).toFixed(0),
+      w: Math.abs(X.impact.cold.wins.pts).toFixed(1) }) : "";
+    const b2bCost = bi ? " " + t("hx.f3.cost", { pts: Math.abs(bi.pts).toFixed(0), lo: Math.abs(bi.hi).toFixed(0), hi: Math.abs(bi.lo).toFixed(0) }) : "";
 
     const fact = (cls, big, unit, l, d) =>
       `<div class="fact ${cls}"><div class="big">${big}<small>${unit}</small></div><div class="l">${l}</div><p>${d}</p></div>`;
+    const h0 = H && H.cold_start["0–30 s"];
     $("#facts").innerHTML =
+      (c0 ? fact("bad", fmt(c0.effect_pp, 2), " pp", t("hx.f2.l"), t("hx.f2.d")) : "") +
+      (ci ? fact("bad", "−" + Math.abs(ci.pts).toFixed(0), " pts", t("hx.fc.l"),
+        t("hx.fc.d", { lo: Math.abs(ci.hi).toFixed(0), hi: Math.abs(ci.lo).toFixed(0), w: Math.abs(X.impact.cold.wins.pts).toFixed(1) })) : "") +
+      (h0 ? fact(H.verdict === "replicated" ? "good" : "warn", t("hx.fr.big." + H.verdict), "", t("hx.fr.l"),
+        t("hx.fr.d", { x: fmt(h0.new, 2), lo: fmt(h0.ci95[0], 2), hi: fmt(h0.ci95[1], 2) })) : "") +
       fact(S.n_flagged ? "bad" : "good", S.n_flagged, " " + t("of") + " " + S.n_contrast_players, t("hx.f1.l"),
-        t(S.n_flagged ? "hx.f1.d.some" : "hx.f1.d")) +
-      (c0 ? fact("bad", fmt(c0.effect_pp, 1), " " + t("hx.pts"), t("hx.f2.l"), t("hx.f2.d")) : "") +
-      (b2b ? fact("warn", fmt(b2b.coef_pp, 1), " " + t("hx.pts"), t("hx.f3.l"),
-        t("hx.f3.d") + (home ? " " + t("hx.f3.home", { x: fmt(home.coef_pp, 1) }) : "")) : "");
+        t(S.n_flagged ? "hx.f1.d.some" : "hx.f1.d"));
+    void coldCost; void b2bCost; void b2b; void home;
 
     // One stint on court: cold start buckets, then the warmed-up stretch up to ~12 min
     const segs = (S.cold_start || []).filter((r) => r.group === "Time since entering" && r.effect_pp != null && !/reference/.test(r.label))
@@ -239,7 +273,7 @@
       kpi(t("kpi.flag"), `${S.n_flagged} <small style="font-size:.5em;color:var(--muted)">${t("of")} ${S.n_contrast_players}</small>`, t("kpi.flag.d"), S.n_flagged ? "bad" : "") +
       kpi(t("kpi.cold"), c0 ? fmt(c0.effect_pp, 1) + " pp" : "—", c0 ? t("kpi.cold.d", { lo: fmt(c0.lo_pp, 1), hi: fmt(c0.hi_pp, 1) }) : "", "bad") +
       kpi(t("kpi.shots"), num(S.n_shots_analysis), t("kpi.shots.d", { games: num(S.n_games), players: num(S.n_players) }));
-    renderSimple(); renderUses(); renderCoach(); renderGlossary();
+    renderSimple(); renderUses(); renderCoach(); renderGlossary(); renderCard();
     $("#verdict").className = "card verdict " + v.cls;
     $("#verdict").innerHTML = `<h3>${esc(v.title)} <span class="badge ${v.cls}">${esc(v.badge)}</span></h3><p>${v.text}</p>`;
 
@@ -305,6 +339,211 @@
       `<p>${t("het.p1", { k: h.k, tau: (h.tau * 100).toFixed(2), i2: (h.I2 * 100).toFixed(0), p: h.p_het < 0.001 ? "&lt; 0.001" : "= " + h.p_het.toFixed(3) })}</p>` +
       `<p>${h.p_het > 0.05 ? t("het.none", { n: S.seasons.length }) : t("het.some")}</p>` +
       `<p>${t("het.flag", { f: S.n_flagged, n: S.n_contrast_players, e: Math.round(S.n_contrast_players * 0.05) })}</p>`;
+  }
+
+  /* ---------------- one-page coach card ---------------- */
+  function renderCard() {
+    const c0 = coldRow("0–30 s"), h = S.heterogeneity;
+    const b2b = (S.slopes.con_controles || []).find((r) => r.term === "b2b");
+    const rim = X && X.shot_type.find((r) => r.type === "Near the rim (paint)" && r.window === "0–30 s");
+    const three = X && X.shot_type.find((r) => r.type === "Three-pointer" && r.window === "0–30 s");
+    const mid = X && X.shot_type.find((r) => r.type === "Mid-range" && r.window === "0–30 s");
+    const ftc = X && X.free_throws.cold[0];
+    const fact = (cls, big, unit, l, d) =>
+      `<div class="fact ${cls}"><div class="big">${big}<small>${unit}</small></div><div class="l">${l}</div><p>${d}</p></div>`;
+    if (X) {
+      const ci = X.impact.cold, bi = X.impact.b2b;
+      $("#cc-impact").innerHTML =
+        fact("bad", "−" + Math.abs(ci.total.pts).toFixed(0), " " + t("cc.pts.season"), t("cc.i1.l"),
+          t("cc.i1.d", { lo: Math.abs(ci.total.hi).toFixed(0), hi: Math.abs(ci.total.lo).toFixed(0), w: Math.abs(ci.wins.pts).toFixed(1),
+            g: Math.abs(ci.per_game.pts).toFixed(1) })) +
+        fact("warn", "−" + Math.abs(bi.pts).toFixed(0), " " + t("cc.pts.season"), t("cc.i2.l"),
+          t("cc.i2.d", { lo: Math.abs(bi.hi).toFixed(0), hi: Math.abs(bi.lo).toFixed(0), g: Math.abs(bi.per_b2b_game).toFixed(1) })) +
+        fact("good", S.n_flagged, " " + t("of") + " " + S.n_contrast_players, t("cc.i3.l"), t("cc.i3.d", { mu: fmt(h.mu * 100, 2), long: S.long }));
+    }
+    const ci95 = (r) => t("ci", { lo: fmt(r.lo_pp, 1), hi: fmt(r.hi_pp, 1) });
+    const h0 = H && H.cold_start["0–30 s"], bt = X && X.bench_time, sl = bt && bt.slope_pp_per_bench_min;
+    const rows = [
+      [t("cc.r1.f", { x: c0 ? fmt(c0.effect_pp, 1) : "—", ci: c0 ? ci95(c0) : "", ft: ftc ? fmt(ftc.effect_pp, 1) : "—" }),
+        t(rim && three && mid ? "cc.r1.a" : "cc.r1.a.generic", { r: rim ? fmt(rim.effect_pp, 1) : "", tr: three ? fmt(three.effect_pp, 1) : "", m: mid ? fmt(mid.effect_pp, 1) : "" }),
+        t(h0 ? "cc.r1.e.rep" : "cc.r1.e", { n: S.seasons.length, x: h0 ? fmt(h0.new, 2) : "", v: H ? t("verdict." + H.verdict) : "" })],
+    ];
+    if (sl) {
+      const grows = sl.hi_pp < 0, flat = sl.lo_pp < 0 && sl.hi_pp > 0;
+      rows.push([t(grows ? "cc.rb.f.grows" : flat ? "cc.rb.f.flat" : "cc.rb.f.shrinks",
+        { x: fmt(sl.coef_pp, 2), ci: t("ci", { lo: fmt(sl.lo_pp, 2), hi: fmt(sl.hi_pp, 2) }) }),
+        t(grows ? "cc.rb.a.grows" : "cc.rb.a.flat"), t("cc.rb.e", { n: num(sl.n) })]);
+    }
+    rows.push([t("cc.r2.f", { mu: fmt(h.mu * 100, 2), ci: t("ci", { lo: fmt(h.mu_lo * 100, 1), hi: fmt(h.mu_hi * 100, 1) }), long: S.long }), t("cc.r2.a"),
+      t("cc.r2.e", { n: S.n_contrast_players })]);
+    rows.push([t("cc.r3.f", { x: b2b ? fmt(b2b.coef_pp, 2) : "—", ci: b2b ? ci95(b2b) : "" }), t("cc.r3.a"), t("cc.r3.e")]);
+    $("#cc-table").innerHTML = `<table><thead><tr><th>${t("cc.th.f")}</th><th>${t("cc.th.a")}</th><th>${t("cc.th.e")}</th></tr></thead><tbody>` +
+      rows.map(([f, a, e]) => `<tr><td>${f}</td><td>${a}</td><td>${e}</td></tr>`).join("") + `</tbody></table>`;
+    $("#cc-note").textContent = t("cc.note", { ppw: X ? X.impact.points_per_win : 30 });
+  }
+
+  /* ---------------- extra analyses (impact, shot type, free throws, selection) ---------------- */
+  function renderExtra() {
+    if (!X) { ["#chart-impact", "#chart-shot-type", "#chart-ft", "#chart-selection"].forEach((s) => $(s).closest(".card").classList.add("hidden")); return; }
+    const ic = X.impact.cold, bi = X.impact.b2b;
+    $("#chart-impact").innerHTML = forest({
+      rows: ic.buckets.map((b) => ({ label: t("x.imp.cold", { b: tl(b.label) }), est: b.pts, lo: b.lo, hi: b.hi, color: C.bad,
+        tip: t("x.imp.tip", { n: Math.round(b.shots_per_team_season) }) }))
+        .concat([{ label: t("x.imp.total"), est: ic.total.pts, lo: ic.total.lo, hi: ic.total.hi, color: C.court },
+          { label: t("x.imp.b2b"), est: bi.pts, lo: bi.lo, hi: bi.hi, color: C.maple }]),
+      xTitle: t("ax.pts.season"), labelW: 220, label: t("e.x1.t"),
+    });
+    $("#impact-note").textContent = t("x.imp.note", { ppw: X.impact.points_per_win, f: Math.abs(ic.formula_pts).toFixed(0),
+      w: Math.abs(ic.wins.pts).toFixed(1), wlo: Math.abs(ic.wins.hi).toFixed(1), whi: Math.abs(ic.wins.lo).toFixed(1) });
+
+    $("#chart-shot-type").innerHTML = forest({
+      rows: X.shot_type.filter((r) => r.window === "0–30 s" || r.window === "0–2 min").map((r) => ({ label: `${tl(r.type)} · ${tl(r.window)}`, est: r.effect_pp, lo: r.lo_pp, hi: r.hi_pp,
+        color: r.q < 0.05 ? C.bad : C.blue, tip: t("tip.shots", { n: num(r.n) }) + ` · q=${r.q.toFixed(4)}` })),
+      xTitle: t("ax.pp.red2"), labelW: 230, label: t("e.x2.t"),
+    });
+    $("#shot-type-note").textContent = t("x.type.note");
+
+    const ft = X.free_throws;
+    $("#chart-ft").innerHTML = forest({
+      rows: ft.cold.filter((r) => r.effect_pp != null && !/reference/.test(r.label)).map((r) => ({ label: t("x.ft.cold", { b: tl(r.label) }),
+        est: r.effect_pp, lo: r.lo_pp, hi: r.hi_pp, color: r.hi_pp < 0 ? C.bad : C.blue, tip: t("tip.shots", { n: num(r.n) }) }))
+        .concat([{ label: t("x.ft.long", { long: S.long, ref: REF() }), est: ft.contrast.effect_pp, lo: ft.contrast.lo_pp, hi: ft.contrast.hi_pp,
+          color: ft.contrast.hi_pp < 0 ? C.bad : C.blue, tip: t("tip.shots", { n: num(ft.contrast.n) }) }]),
+      xTitle: t("ax.pp.red2"), labelW: 230, label: t("e.x3.t"),
+    });
+    $("#ft-note").textContent = t("x.ft.note", { n: num(ft.n), p: (ft.ft_pct * 100).toFixed(1) });
+
+    const sel = X.selection, win = (g, far) => (sel.by_window || []).find((r) => r.group === g && /more than/.test(r.window) === far);
+    const srows = [["all", sel.all], ["exo", sel.exogenous], ["coach", sel.coach], ["coach.far", win("coach", true)], ["coach.near", win("coach", false)]];
+    $("#chart-selection").innerHTML = forest({
+      rows: srows.filter(([, r]) => r).map(([k, r]) => ({ label: t("x.sel." + k, { m: sel.end_window_min }), est: r.effect_pp, lo: r.lo_pp, hi: r.hi_pp,
+        color: r.hi_pp < 0 ? C.bad : r.lo_pp > 0 ? C.good : C.blue, tip: t("tip.shots", { n: num(r.n) }) })),
+      xTitle: t("ax.long.minus.ref", { long: S.long, ref: REF() }), labelW: 260, label: t("e.x4.t"),
+    });
+    $("#selection-note").textContent = t("x.sel.note", { m: sel.end_window_min });
+
+    const bt = X.bench_time;
+    if (bt) {
+      $("#chart-bench").innerHTML = forest({
+        rows: bt.buckets.filter((r) => r.effect_30s_pp != null).map((r) => ({ label: tl(r.label), est: r.effect_30s_pp, lo: r.lo_30s_pp, hi: r.hi_30s_pp,
+          color: r.q < 0.05 && r.hi_30s_pp < 0 ? C.bad : C.blue, tip: t("tip.shots", { n: num(r.n_30s) }) + ` · q=${r.q.toFixed(3)}` })),
+        xTitle: t("ax.pp.red2"), labelW: 230, W: 1120, rowH: 30, label: t("e.b.t"),
+      });
+      const sl = bt.slope_pp_per_bench_min;
+      $("#bench-note").textContent = t("x.bench.note", { x: fmt(sl.coef_pp, 3), lo: fmt(sl.lo_pp, 3), hi: fmt(sl.hi_pp, 3), n: num(sl.n) });
+    } else $("#chart-bench").closest(".card").classList.add("hidden");
+  }
+
+  /* ---------------- preregistered replication (2025-26) ---------------- */
+  function renderHoldout() {
+    if (!H) { $("#holdout-card").classList.add("hidden"); return; }
+    const rows = [];
+    Object.entries(H.cold_start).forEach(([w, r]) => {
+      rows.push({ label: t("h.row.frozen", { w: tl(w) }), est: r.frozen, lo: r.frozen_ci95[0], hi: r.frozen_ci95[1], color: C.dim, tip: "2021-25" });
+      rows.push({ label: t("h.row.new", { w: tl(w) }), est: r.new, lo: r.ci95[0], hi: r.ci95[1], color: r.ci95[1] < 0 ? C.bad : C.blue,
+        tip: t("tip.shots", { n: num(r.n) }) });
+    });
+    const f = H.fatigue_8plus_vs_2_6;
+    rows.push({ label: t("h.row.ffrozen", { long: S.long }), est: f.frozen, lo: f.frozen_ci95[0], hi: f.frozen_ci95[1], color: C.dim, tip: "2021-25" });
+    rows.push({ label: t("h.row.fnew", { long: S.long }), est: f.new, lo: f.ci95[0], hi: f.ci95[1], color: C.blue, tip: t("tip.players", { n: f.players }) });
+    $("#chart-holdout").innerHTML = forest({ rows, xTitle: t("ax.pp.red2"), labelW: 300, W: 1120, rowH: 28, label: t("e.h.t") });
+    $("#holdout-note").innerHTML = t("h.note", { v: t("verdict." + H.verdict), hash: H.preregistration_commit.slice(0, 7),
+      date: H.preregistration_date.slice(0, 10), games: num(H.games), shots: num(H.shots) });
+  }
+
+  /* ---------------- bench calculator ---------------- */
+  const calcState = { sit: "re", type: "three" };
+  function initCalc() {
+    if (!X || !X.bench_time) { $("#tool-calc").innerHTML = `<p class="note">${t("calc.none")}</p>`; return; }
+    $("#calc-player").innerHTML = P.map((p) => `<option value="${p.id}">${esc(p.name)} · ${esc(p.team)}</option>`).join("");
+    ["calc-player", "calc-rival"].forEach((id) => $("#" + id).addEventListener("change", renderCalc));
+    ["bench", "sec"].forEach((k) => $("#calc-" + k).addEventListener("input", () => { $("#calc-" + k + "-v").textContent = $("#calc-" + k).value; renderCalc(); }));
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest("#calc-sit button, #calc-type button");
+      if (!b) return;
+      calcState[b.parentElement.id === "calc-sit" ? "sit" : "type"] = b.dataset.v;
+      renderCalc();
+    });
+    renderCalc();
+  }
+  async function renderCalc() {
+    if (!X || !X.bench_time) return;
+    const segBtns = (opts, cur) => opts.map((v) => `<button type="button" data-v="${v}" class="${v === cur ? "on" : ""}">${t("calc.opt." + v)}</button>`).join("");
+    $("#calc-sit").innerHTML = segBtns(["re", "first", "half"], calcState.sit);
+    $("#calc-type").innerHTML = segBtns(["three", "mid", "rim"], calcState.type);
+    $("#calc-bench-f").classList.toggle("hidden", calcState.sit !== "re");
+    const rv = $("#calc-rival").value;
+    $("#calc-rival").innerHTML = `<option value="">${t("calc.rival.none")}</option>` +
+      (DEFR ? DEFR.teams.map((x) => `<option value="${esc(x.team)}">${esc(x.team)}</option>`).join("") : "");
+    $("#calc-rival").value = rv;
+    const pid = +$("#calc-player").value, pl = P.find((p) => p.id === pid);
+    if (!shotCache[pid]) shotCache[pid] = await fetch(`data/shots/${pid}.json`).then((r) => r.json());
+    if (+$("#calc-player").value !== pid) return;
+    const base = CALC.playerBase(shotCache[pid], CALC.leagueFg(S));
+    const rival = rv && DEFR ? DEFR.teams.find((x) => x.team === rv) : null;
+    const sec = +$("#calc-sec").value, benchMin = +$("#calc-bench").value, c0 = coldRow("0–30 s");
+    const args = { base, X, overall30: c0.effect_pp, situation: calcState.sit, benchMin, sec, rival };
+    const r = CALC.predict({ ...args, type: calcState.type });
+    const pc = (v) => (v * 100).toFixed(1) + "%", pp = (v) => fmt(v, 1) + " pp";
+    const row = (l, v) => `<tr><td>${l}</td><td>${v}</td></tr>`;
+    const alt = Object.keys(CALC.TYPES).map((k) => ({ k, cold: CALC.coldTerm(X, k, sec).pp }));
+    const best = alt.reduce((a, b) => (b.cold > a.cold ? b : a));
+    const mine = alt.find((a) => a.k === calcState.type);
+    let rec;
+    if (!r.window) rec = t("calc.rec.warm");
+    else if (best.k !== calcState.type && best.cold - mine.cold >= 0.5)
+      rec = t("calc.rec.switch", { s: sec, type: t("calc.opt." + calcState.type), x: fmt(mine.cold, 1), alt: t("calc.opt." + best.k), y: fmt(best.cold, 1) });
+    else rec = t("calc.rec.keep", { s: sec, x: fmt(mine.cold, 1) });
+    $("#calc-out").innerHTML =
+      `<div class="big">${pc(r.p)}<small>${t("calc.prob")}</small></div>` +
+      `<p class="sub">${t("calc.ci", { lo: pc(r.lo), hi: pc(r.hi) })} · ${esc(pl ? pl.name : "")}, ${t("calc.opt." + calcState.type)}</p>` +
+      `<table class="calc-break">` +
+      row(t("calc.part.base", { n: base[calcState.type].n }), pc(r.parts.base)) +
+      row(t("calc.part.rival"), rival ? pp(r.parts.rival) : "—") +
+      row(t("calc.part.cold", { w: r.window ? tl(r.window) : t("calc.none.window") }), pp(r.parts.cold)) +
+      row(t("calc.part.bench"), r.window === "0–30 s" ? pp(r.parts.bench) : "—") + `</table>` +
+      `<p class="calc-rec">${rec}</p>`;
+  }
+
+  /* ---------------- team audit ---------------- */
+  const auditSort = { key: "pts", dir: -1 };
+  function initAudit() {
+    if (!X || !X.team_audit) { $("#audit").innerHTML = `<p class="note">${t("calc.none")}</p>`; return; }
+    const seasons = Array.from(new Set(X.team_audit.rows.map((r) => r.season))).sort();
+    $("#audit-season").innerHTML = seasons.map((s) => `<option value="${s}">${yy(s)}</option>`).join("");
+    $("#audit-season").value = seasons[seasons.length - 1];
+    $("#audit-season").addEventListener("change", renderAudit);
+    $("#audit-table").addEventListener("click", (e) => {
+      const th = e.target.closest("th[data-k]");
+      if (!th) return;
+      auditSort.dir = auditSort.key === th.dataset.k ? -auditSort.dir : -1;
+      auditSort.key = th.dataset.k;
+      renderAudit();
+    });
+    renderAudit();
+  }
+  function renderAudit() {
+    if (!X || !X.team_audit) return;
+    const A = X.team_audit, sea = $("#audit-season").value;
+    const rows = A.rows.filter((r) => r.season === sea).sort((a, b) => auditSort.dir * (a[auditSort.key] < b[auditSort.key] ? -1 : a[auditSort.key] > b[auditSort.key] ? 1 : 0));
+    // a position only means something if teams really differ (tau > 0); otherwise it would rank noise
+    const real = (A.tau_by_season[sea] || 0) > 0;
+    const cols = [["team", t("au.col.team")], ["pts", t("au.col.pts")], ["shrunk", t("au.col.shrunk")], ["jump_share", t("au.col.jump")]]
+      .concat(real ? [["rank", t("au.col.rank")]] : []);
+    $("#audit-table").innerHTML = `<table><thead><tr>` +
+      cols.map(([k, l]) => `<th data-k="${k}"${auditSort.key === k ? ` aria-sort="${auditSort.dir > 0 ? "ascending" : "descending"}"` : ""}>${l}</th>`).join("") +
+      `</tr></thead><tbody>` + rows.map((r) => `<tr><td>${esc(r.team)}</td>` +
+        `<td class="num">${fmt(r.pts, 1)} <span class="muted">(${fmt(r.lo, 0)} ${t("to")} ${fmt(r.hi, 0)})</span></td>` +
+        `<td class="num">${fmt(r.shrunk, 1)}</td><td class="num">${(r.jump_share * 100).toFixed(0)}%</td>${real ? `<td class="num">${r.rank}</td>` : ""}</tr>`).join("") +
+      `</tbody></table>`;
+    const byShrunk = A.rows.filter((r) => r.season === sea).sort((a, b) => b.shrunk - a.shrunk);
+    $("#chart-audit").innerHTML = forest({
+      rows: byShrunk.map((r) => ({ label: r.team, est: r.pts, lo: r.lo, hi: r.hi, color: r.hi < 0 ? C.bad : r.lo > 0 ? C.good : C.blue,
+        tip: t("au.tip", { s: fmt(r.shrunk, 1), n: num(r.n_cold) }) })),
+      W: 1120, rowH: 22, labelW: 230, xTitle: t("ax.pts.season"), label: t("au.chart.t"),
+    });
+    $("#audit-note").textContent = t((A.tau_by_season[sea] || 0) > 0 ? "au.note.real" : "au.note.noise", { lg: (A.league_jump_share * 100).toFixed(0), r: A.corr_jump_share_pts.toFixed(2),
+      tau: (A.tau_by_season[sea] || 0).toFixed(1) });
   }
 
   /* ---------------- team defense ---------------- */
@@ -421,7 +660,7 @@
     }).join("");
     $$(".sv").forEach((e) => (e.textContent = `${S.short_lo}–${S.short}`));
     $$(".lv").forEach((e) => (e.textContent = S.long));
-    $$("#new input").forEach((i) => i.addEventListener("input", renderNew));
+    $$("#tool-new input").forEach((i) => i.addEventListener("input", renderNew));
     renderNew();
   }
   function renderNew() {
@@ -527,7 +766,7 @@
 
   /* ---------------- (re)render ---------------- */
   function renderAll() {
-    renderHero(); renderEvidence(); renderDefense(); renderMethod(); renderNew();
+    renderHero(); renderEvidence(); renderExtra(); renderHoldout(); renderDefense(); renderMethod(); renderNew(); renderCalc(); renderAudit();
   }
   function onLang() {
     if (!ready) return;
@@ -536,7 +775,8 @@
     fillPlayers(cur && cur.id);
   }
   function init() {
-    renderHero(); renderEvidence(); renderDefense(); initPlayerControls(); initNew(); renderMethod();
+    renderHero(); renderEvidence(); renderExtra(); renderHoldout(); renderDefense(); initPlayerControls(); initCalc(); initAudit();
+    $("#print-card").addEventListener("click", () => window.print()); initNew(); renderMethod();
     ready = true;
     window.I18N.onChange(onLang);
     show(location.hash.slice(1) || "summary");

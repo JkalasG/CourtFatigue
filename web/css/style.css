@@ -345,3 +345,118 @@ input[type=range] { accent-color: var(--court); width: 100%; }
   * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .hero-art .ha-court [pathLength] { stroke-dashoffset: 0; }
 }
+
+/* One-page coach card */
+.cc table { width: 100%; border-collapse: collapse; }
+.cc th { text-align: left; font: 700 1.05rem/1.2 var(--display); letter-spacing: .02em; color: var(--muted); padding: 0 16px 10px 0; }
+.cc td { vertical-align: top; padding: 14px 16px 14px 0; border-top: 1px solid var(--faint); color: var(--chalk-2); }
+.cc td b { color: var(--chalk); font-weight: 600; }
+.cc td:first-child { width: 46%; }
+@media (max-width: 640px) {
+  .cc tr, .cc td, .cc th { display: block; width: auto !important; }
+  .cc thead { display: none; }
+  .cc td:first-child { padding-bottom: 4px; }
+  .cc td + td { border-top: 0; padding-top: 0; }
+}
+
+/* Print the coach card on one page */
+.print-btn { margin-top: 18px; }
+@media print {
+  .topbar, .foot, .to-top, .backbar, .print-btn, .pane:not(#staff), #staff > :not(.hero):not(#sec-card) { display: none !important; }
+  body { background: #fff; color: #111; }
+  #staff, #staff * { color: #111 !important; border-color: #bbb !important; }
+  #staff .fact::before { background: #111 !important; }
+}
+
+/* Bench calculator */
+.calc { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 0 40px; margin-top: 28px; }
+.calc .field { margin-bottom: 18px; }
+.calc .seg-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.calc .seg-btns button { appearance: none; background: transparent; color: var(--chalk-2); border: 1px solid var(--hair);
+  padding: 6px 12px; font: 500 .88rem var(--body); cursor: pointer; }
+.calc .seg-btns button.on { color: var(--chalk); border-color: var(--court); }
+.calc-out .big { font: 800 clamp(3.4rem, 7vw, 4.8rem)/.95 var(--display); }
+.calc-out .big small { font: 600 .32em var(--body); color: var(--muted); margin-left: 6px; }
+.calc-break { width: 100%; border-collapse: collapse; margin: 18px 0 10px; }
+.calc-break td { padding: 7px 0; border-top: 1px solid var(--faint); color: var(--chalk-2); }
+.calc-break td:last-child { text-align: right; font-variant-numeric: tabular-nums; color: var(--chalk); }
+.calc-rec { border-left: 2px solid var(--court); padding: 6px 0 6px 14px; margin-top: 16px; }
+
+/* Team audit table */
+.audit-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 22px 0 10px; }
+.audit table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.audit th { text-align: left; font: 600 .82rem var(--body); color: var(--muted); padding: 8px 10px 8px 0; cursor: pointer; white-space: nowrap; }
+.audit th[aria-sort] { color: var(--chalk); }
+.audit td { padding: 7px 10px 7px 0; border-top: 1px solid var(--faint); color: var(--chalk-2); }
+.audit td.num { text-align: right; }
+.audit .scroll { overflow-x: auto; }
+.facts.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.facts.four .fact .big { font-size: clamp(2.8rem, 5vw, 3.8rem); }
+@media (max-width: 1000px) { .facts.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) { .calc { grid-template-columns: 1fr; } .facts.four { grid-template-columns: 1fr; } }
+
+.muted { color: var(--muted); }
+
+/* ---------- tools: three big switch cards ---------- */
+.toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 30px 0 34px; }
+.tool-btn { appearance: none; text-align: left; cursor: pointer; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px;
+  align-items: start; padding: 20px 22px; background: rgba(236, 230, 218, .03); color: var(--chalk-2);
+  border: 1px solid var(--hair); border-top: 3px solid transparent; transition: background .15s, border-color .15s, transform .15s; }
+.tool-btn .ic { grid-row: span 2; width: 1.9em; height: 1.9em; color: var(--muted); margin-top: 2px; transition: color .15s; }
+.tool-btn b { font: 700 1.35rem/1.1 var(--display); color: var(--chalk); letter-spacing: .01em; }
+.tool-btn span { font-size: .9rem; line-height: 1.4; }
+.tool-btn:hover { background: rgba(236, 230, 218, .06); transform: translateY(-2px); }
+.tool-btn.on { border-top-color: var(--court); background: rgba(var(--court-rgb), .08); }
+.tool-btn.on .ic { color: var(--court); }
+.tool { display: none; }
+.tool.on { display: block; animation: fadeUp .25s ease-out; }
+.tool-head h2 { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+.tool-head h2 em { font-style: normal; color: var(--maple); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- chapters (coach and evidence pages) ---------- */
+.chapter { margin: 64px 0 14px; padding-top: 28px; border-top: 1px solid var(--hair); position: relative; }
+.chapter::before { content: ""; position: absolute; top: -1px; left: 0; width: 56px; height: 3px; background: var(--court); }
+.chapter-k { margin: 0 0 6px; font: 800 1rem var(--display); letter-spacing: .14em; color: var(--court); }
+.chapter-t { font-size: clamp(2rem, 4.4vw, 3rem); }
+.chapter-t em { font-style: normal; color: var(--maple); }
+.chapter .lede { max-width: 70ch; }
+
+/* ---------- evidence index ---------- */
+.ev-index { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 28px 0 8px; }
+.ev-index button { appearance: none; cursor: pointer; text-align: left; display: flex; align-items: baseline; gap: 12px;
+  padding: 16px 18px; background: transparent; color: var(--chalk); border: 1px solid var(--hair); transition: border-color .15s, background .15s; }
+.ev-index button span { font: 800 1.6rem var(--display); color: var(--court); }
+.ev-index button b { font: 600 1rem/1.25 var(--body); }
+.ev-index button:hover { border-color: var(--court); background: rgba(var(--court-rgb), .06); }
+#audit > h3 { margin-top: 18px; }
+#audit > h3 em { font-style: normal; color: var(--maple); }
+
+@media (max-width: 860px) {
+  .toolbar, .ev-index { grid-template-columns: 1fr; gap: 10px; }
+  .tool-btn { padding: 14px 16px; }
+  .chapter { margin-top: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .tool.on { animation: none; } .tool-btn:hover { transform: none; } }
+
+/* ---------- tools: make the switch cards read as buttons ---------- */
+.tool-pick { display: flex; align-items: center; gap: 8px; margin: 26px 0 -16px; color: var(--court); font: 600 .95rem var(--body); }
+.tool-pick .ic { animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+.tool-btn { position: relative; grid-template-rows: auto 1fr auto; box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+.tool-btn .tool-cta { grid-column: 2; margin-top: 12px; font-style: normal; font: 600 .86rem var(--body); }
+.tool-btn .tool-cta i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; }
+.tool-btn .tool-cta .ic { width: 1em; height: 1em; grid-row: auto; margin: 0; color: currentColor; transition: transform .15s; }
+.tool-btn .go { color: var(--court); padding: 5px 12px; border: 1px solid rgba(var(--court-rgb), .55); }
+.tool-btn .open { display: none !important; color: var(--good); }
+.tool-btn:hover { border-color: rgba(var(--court-rgb), .7); }
+.tool-btn:hover .go { background: rgba(var(--court-rgb), .14); }
+.tool-btn:hover .go .ic { transform: translateX(3px); }
+.tool-btn.on { border-color: rgba(var(--court-rgb), .55); border-top-color: var(--court); cursor: default; transform: none; }
+.tool-btn.on .go { display: none !important; }
+.tool-btn.on .open { display: inline-flex !important; }
+.tool-btn.on::after { content: ""; position: absolute; left: 50%; bottom: -10px; width: 18px; height: 18px; margin-left: -9px;
+  background: #2c241c; border-right: 1px solid rgba(var(--court-rgb), .55); border-bottom: 1px solid rgba(var(--court-rgb), .55); transform: rotate(45deg); }
+.tool.on { border-top: 2px solid rgba(var(--court-rgb), .55); padding-top: 26px; }
+@media (max-width: 860px) { .tool-btn.on::after { display: none; } .tool-pick { margin-bottom: -18px; } }
+@media (prefers-reduced-motion: reduce) { .tool-pick .ic { animation: none; } }

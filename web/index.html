@@ -44,10 +44,9 @@
       </a>
       <nav class="tabs" id="tabs" role="tablist">
         <button role="tab" data-tab="summary" class="on"><svg class="ic" aria-hidden="true"><use href="#i-summary"/></svg><span data-i18n="nav.summary"></span></button>
-        <button role="tab" data-tab="uses"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="nav.uses"></span></button>
-        <button role="tab" data-tab="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="nav.player"></span></button>
+        <button role="tab" data-tab="staff"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="nav.staff"></span></button>
+        <button role="tab" data-tab="tools"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="nav.tools"></span></button>
         <button role="tab" data-tab="evidence"><svg class="ic" aria-hidden="true"><use href="#i-evidence"/></svg><span data-i18n="nav.evidence"></span></button>
-        <button role="tab" data-tab="new"><svg class="ic" aria-hidden="true"><use href="#i-new"/></svg><span data-i18n="nav.new"></span></button>
         <button role="tab" data-tab="method"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="nav.method"></span></button>
       </nav>
       <div class="lang" id="lang-switch" role="group" aria-label="Language">
@@ -74,14 +73,15 @@
         <div class="hero-art" id="hero-art"></div>
       </div>
 
-      <div class="facts" id="facts"></div>
+      <div class="facts four" id="facts"></div>
 
       <div class="card stint" id="stint"></div>
 
       <p class="takeaway" id="takeaway"></p>
 
       <div class="cta">
-        <button class="btn primary" data-go="player"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><span data-i18n="hero.cta1"></span></button>
+        <button class="btn primary" data-go="card"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-i18n="hero.cta4"></span></button>
+        <button class="btn" data-go="calc"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span data-i18n="hero.cta5"></span></button>
         <button class="btn" data-go="uses"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="hero.cta3"></span></button>
         <a class="btn" href="simulador/index.html"><svg class="ic" aria-hidden="true"><use href="#i-cube"/></svg><span data-i18n="hero.cta2"></span></a>
       </div>
@@ -115,11 +115,22 @@
       <details class="card glossary" id="glossary"></details>
     </section>
 
-    <!-- USES AND BENEFITS -->
-    <section id="uses" class="pane">
+    <!-- FOR THE COACH: one-page card + uses and benefits -->
+    <section id="staff" class="pane">
       <div class="hero">
-        <p class="hx-q" data-i18n="u.kicker"></p>
-        <h1 data-i18n-html="u.h1"></h1>
+        <p class="hx-q" data-i18n="cc.kicker"></p>
+        <h1 data-i18n-html="cc.h1"></h1>
+      </div>
+      <div id="sec-card">
+        <div class="facts" id="cc-impact"></div>
+        <div class="card cc" id="cc-table"></div>
+        <p class="note" id="cc-note"></p>
+        <button class="btn print-btn" id="print-card"><svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg><span data-i18n="cc.print"></span></button>
+      </div>
+
+      <div class="chapter" id="sec-uses">
+        <p class="chapter-k" data-i18n="u.kicker"></p>
+        <h2 class="chapter-t" data-i18n-html="u.h1"></h2>
         <p class="lede" data-i18n="u.lede"></p>
       </div>
       <h2 class="u-h"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-i18n="u.yes.h"></span></h2>
@@ -129,53 +140,219 @@
       <p class="takeaway" data-i18n-html="u.take"></p>
     </section>
 
-    <!-- PLAYER -->
-    <section id="player" class="pane">
-      <div class="card picker">
-        <div class="field">
-          <label for="team-sel" data-i18n="p.team"></label>
-          <select id="team-sel"></select>
+    <!-- TOOLS: calculator, check players, new player -->
+    <section id="tools" class="pane">
+      <div class="hero">
+        <p class="hx-q" data-i18n="tools.kicker"></p>
+        <h1 data-i18n-html="tools.h1"></h1>
+      </div>
+      <p class="tool-pick"><svg class="ic" aria-hidden="true"><use href="#i-down"/></svg><span data-i18n="tools.pick"></span></p>
+      <div class="toolbar" id="toolbar" role="tablist">
+        <button class="tool-btn on" data-tool="calc" role="tab"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><b data-i18n="nav.calc"></b><span data-i18n="tools.calc.d"></span><em class="tool-cta"><i class="go"><span data-i18n="tools.open"></span> <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></i><i class="open"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="tools.active"></span></i></em></button>
+        <button class="tool-btn" data-tool="player" role="tab"><svg class="ic" aria-hidden="true"><use href="#i-player"/></svg><b data-i18n="nav.player"></b><span data-i18n="tools.player.d"></span><em class="tool-cta"><i class="go"><span data-i18n="tools.open"></span> <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></i><i class="open"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="tools.active"></span></i></em></button>
+        <button class="tool-btn" data-tool="new" role="tab"><svg class="ic" aria-hidden="true"><use href="#i-new"/></svg><b data-i18n="nav.new"></b><span data-i18n="tools.new.d"></span><em class="tool-cta"><i class="go"><span data-i18n="tools.open"></span> <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></i><i class="open"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> <span data-i18n="tools.active"></span></i></em></button>
+      </div>
+
+      <div class="tool on" id="tool-calc">
+        <div class="tool-head">
+          <h2 data-i18n-html="calc.h1"></h2>
+          <p class="lede" data-i18n="calc.lede"></p>
         </div>
-        <div class="field grow">
-          <label for="player-sel" data-i18n="p.player"></label>
-          <select id="player-sel"></select>
+        <div class="calc">
+          <div class="card">
+            <div class="field">
+              <label for="calc-player" data-i18n="p.player"></label>
+              <select id="calc-player"></select>
+            </div>
+            <div class="field">
+              <label data-i18n="calc.situation"></label>
+              <div class="seg-btns" id="calc-sit"></div>
+            </div>
+            <div class="field" id="calc-bench-f">
+              <label for="calc-bench"><span data-i18n="calc.bench"></span> <b id="calc-bench-v">8</b> min</label>
+              <input type="range" id="calc-bench" min="0" max="24" step="0.5" value="8">
+            </div>
+            <div class="field">
+              <label for="calc-sec"><span data-i18n="calc.sec"></span> <b id="calc-sec-v">15</b> s</label>
+              <input type="range" id="calc-sec" min="0" max="180" step="5" value="15">
+            </div>
+            <div class="field">
+              <label data-i18n="calc.type"></label>
+              <div class="seg-btns" id="calc-type"></div>
+            </div>
+            <div class="field">
+              <label for="calc-rival" data-i18n="calc.rival"></label>
+              <select id="calc-rival"></select>
+            </div>
+          </div>
+          <div class="card calc-out" id="calc-out"></div>
         </div>
-        <div class="field">
-          <label for="short-rng"><span data-i18n="p.rested"></span> &lt; <b id="short-v">4</b> min</label>
-          <input type="range" id="short-rng" min="2" max="5" step="0.5" value="4">
+        <p class="note" data-i18n="calc.note"></p>
+      </div>
+
+      <div class="tool" id="tool-player">
+        <div class="card picker">
+          <div class="field">
+            <label for="team-sel" data-i18n="p.team"></label>
+            <select id="team-sel"></select>
+          </div>
+          <div class="field grow">
+            <label for="player-sel" data-i18n="p.player"></label>
+            <select id="player-sel"></select>
+          </div>
+          <div class="field">
+            <label for="short-rng"><span data-i18n="p.rested"></span> &lt; <b id="short-v">4</b> min</label>
+            <input type="range" id="short-rng" min="2" max="5" step="0.5" value="4">
+          </div>
+          <div class="field">
+            <label for="long-rng"><span data-i18n="p.tired"></span> ≥ <b id="long-v">8</b> min</label>
+            <input type="range" id="long-rng" min="6" max="10" step="0.5" value="8">
+          </div>
         </div>
-        <div class="field">
-          <label for="long-rng"><span data-i18n="p.tired"></span> ≥ <b id="long-v">8</b> min</label>
-          <input type="range" id="long-rng" min="6" max="10" step="0.5" value="8">
+
+        <div class="player-head" id="player-head"></div>
+        <div class="grid kpis" id="player-kpis"></div>
+        <div class="card verdict" id="player-verdict"></div>
+
+        <div class="grid two">
+          <div class="card">
+            <h3 data-i18n="p.c1.t"></h3>
+            <p class="sub" data-i18n="p.c1.s"></p>
+            <div id="chart-player-buckets" class="chart"></div>
+          </div>
+          <div class="card">
+            <h3 data-i18n="p.c2.t"></h3>
+            <p class="sub" data-i18n="p.c2.s"></p>
+            <div id="chart-player-contrast" class="chart"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="p.c3.t"></h3>
+          <p class="sub" data-i18n="p.c3.s"></p>
+          <div class="courts" id="courts"></div>
         </div>
       </div>
 
-      <div class="player-head" id="player-head"></div>
-      <div class="grid kpis" id="player-kpis"></div>
-      <div class="card verdict" id="player-verdict"></div>
+      <div class="tool" id="tool-new">
+        <div class="grid two wide-left">
+          <div class="card">
+            <h3 data-i18n="n.c1.t"></h3>
+            <p class="sub" data-i18n="n.c1.s"></p>
+            <div id="mix-sliders" class="mix"></div>
+            <div class="field">
+              <label for="skill-rng"><span data-i18n="n.skill"></span> <b id="skill-v">+0.0</b> pp</label>
+              <input type="range" id="skill-rng" min="-6" max="6" step="0.5" value="0">
+            </div>
+            <details class="own">
+              <summary data-i18n="n.own"></summary>
+              <div class="own-grid">
+                <label><span data-i18n="n.own.s1"></span> <span class="sv">2–6</span> <span data-i18n="n.own.s2"></span> <input type="number" id="own-ns" min="0" value="0"></label>
+                <label><span data-i18n="n.own.made"></span> <input type="number" id="own-ms" min="0" value="0"></label>
+                <label><span data-i18n="n.own.l1"></span> ≥ <span class="lv">8</span> <span data-i18n="n.own.s2"></span> <input type="number" id="own-nl" min="0" value="0"></label>
+                <label><span data-i18n="n.own.made"></span> <input type="number" id="own-ml" min="0" value="0"></label>
+              </div>
+            </details>
+          </div>
+          <div class="card">
+            <h3 data-i18n="n.c2.t"></h3>
+            <div id="proj-kpis" class="grid kpis small"></div>
+            <div id="chart-projection" class="chart"></div>
+            <p class="note" id="proj-note"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVIDENCE: three chapters -->
+    <section id="evidence" class="pane">
+      <div class="hero">
+        <p class="hx-q" data-i18n="ev.kicker"></p>
+        <h1 data-i18n-html="ev.h1"></h1>
+        <p class="lede" data-i18n="ev.lede"></p>
+      </div>
+      <nav class="ev-index" id="ev-index" aria-label="Evidence">
+        <button data-jump="ch-cold"><span>01</span><b data-i18n="ev.ch1"></b></button>
+        <button data-jump="ch-fatigue"><span>02</span><b data-i18n="ev.ch2"></b></button>
+        <button data-jump="ch-teams"><span>03</span><b data-i18n="ev.ch3"></b></button>
+      </nav>
+
+      <div class="chapter" id="ch-cold">
+        <p class="chapter-k">01</p>
+        <h2 class="chapter-t" data-i18n="ev.ch1"></h2>
+        <p class="lede" data-i18n="ev.ch1.d"></p>
+      </div>
+
+      <div class="card" id="holdout-card">
+        <h3 data-i18n="e.h.t"></h3>
+        <p class="sub" data-i18n="e.h.s"></p>
+        <div id="chart-holdout" class="chart"></div>
+        <p class="note" id="holdout-note"></p>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="e.c5.t"></h3>
+        <p class="sub" data-i18n="e.c5.s"></p>
+        <div id="chart-cold" class="chart"></div>
+        <p class="note" id="cold-note"></p>
+      </div>
 
       <div class="grid two">
         <div class="card">
-          <h3 data-i18n="p.c1.t"></h3>
-          <p class="sub" data-i18n="p.c1.s"></p>
-          <div id="chart-player-buckets" class="chart"></div>
+          <h3 data-i18n="e.x1.t"></h3>
+          <p class="sub" data-i18n="e.x1.s"></p>
+          <div id="chart-impact" class="chart"></div>
+          <p class="note" id="impact-note"></p>
         </div>
         <div class="card">
-          <h3 data-i18n="p.c2.t"></h3>
-          <p class="sub" data-i18n="p.c2.s"></p>
-          <div id="chart-player-contrast" class="chart"></div>
+          <h3 data-i18n="e.x2.t"></h3>
+          <p class="sub" data-i18n="e.x2.s"></p>
+          <div id="chart-shot-type" class="chart"></div>
+          <p class="note" id="shot-type-note"></p>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 data-i18n="e.x3.t"></h3>
+          <p class="sub" data-i18n="e.x3.s"></p>
+          <div id="chart-ft" class="chart"></div>
+          <p class="note" id="ft-note"></p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="e.c4.t"></h3>
+          <p class="sub" data-i18n="e.c4.s"></p>
+          <div id="chart-cold-seasons" class="chart"></div>
         </div>
       </div>
 
       <div class="card">
-        <h3 data-i18n="p.c3.t"></h3>
-        <p class="sub" data-i18n="p.c3.s"></p>
-        <div class="courts" id="courts"></div>
+        <h3 data-i18n="e.b.t"></h3>
+        <p class="sub" data-i18n="e.b.s"></p>
+        <div id="chart-bench" class="chart"></div>
+        <p class="note" id="bench-note"></p>
       </div>
-    </section>
 
-    <!-- EVIDENCE -->
-    <section id="evidence" class="pane">
+      <div class="chapter" id="ch-fatigue">
+        <p class="chapter-k">02</p>
+        <h2 class="chapter-t" data-i18n="ev.ch2"></h2>
+        <p class="lede" data-i18n="ev.ch2.d"></p>
+      </div>
+
+      <div class="grid two">
+        <div class="card">
+          <h3 data-i18n="e.c3.t"></h3>
+          <p class="sub" data-i18n="e.c3.s"></p>
+          <div id="chart-seasons" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="e.x4.t"></h3>
+          <p class="sub" data-i18n="e.x4.s"></p>
+          <div id="chart-selection" class="chart"></div>
+          <p class="note" id="selection-note"></p>
+        </div>
+      </div>
+
       <div class="grid two">
         <div class="card">
           <h3 data-i18n="e.c1.t"></h3>
@@ -192,26 +369,6 @@
 
       <div class="grid two">
         <div class="card">
-          <h3 data-i18n="e.c3.t"></h3>
-          <p class="sub" data-i18n="e.c3.s"></p>
-          <div id="chart-seasons" class="chart"></div>
-        </div>
-        <div class="card">
-          <h3 data-i18n="e.c4.t"></h3>
-          <p class="sub" data-i18n="e.c4.s"></p>
-          <div id="chart-cold-seasons" class="chart"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 data-i18n="e.c5.t"></h3>
-        <p class="sub" data-i18n="e.c5.s"></p>
-        <div id="chart-cold" class="chart"></div>
-        <p class="note" id="cold-note"></p>
-      </div>
-
-      <div class="grid two">
-        <div class="card">
           <h3 data-i18n="e.c6.t"></h3>
           <p class="sub" data-i18n="e.c6.s"></p>
           <div id="chart-zones" class="chart"></div>
@@ -224,45 +381,39 @@
       </div>
 
       <div class="card">
+        <h3 data-i18n="e.c9.t"></h3>
+        <div id="het-text" class="prose"></div>
+      </div>
+
+      <div class="chapter" id="ch-teams">
+        <p class="chapter-k">03</p>
+        <h2 class="chapter-t" data-i18n="ev.ch3"></h2>
+        <p class="lede" data-i18n="ev.ch3.d"></p>
+      </div>
+
+      <div id="audit">
+        <h3 data-i18n-html="au.h1"></h3>
+        <p class="sub" data-i18n="au.lede"></p>
+        <div class="audit-tools">
+          <div class="field">
+            <label for="audit-season" data-i18n="au.season"></label>
+            <select id="audit-season"></select>
+          </div>
+        </div>
+        <div class="card audit"><div class="scroll" id="audit-table"></div></div>
+        <div class="card">
+          <h3 data-i18n="au.chart.t"></h3>
+          <p class="sub" data-i18n="au.chart.s"></p>
+          <div id="chart-audit" class="chart"></div>
+        </div>
+        <p class="note" id="audit-note"></p>
+      </div>
+
+      <div class="card">
         <h3 data-i18n="e.c8.t"></h3>
         <p class="sub" data-i18n="e.c8.s"></p>
         <div id="chart-defense" class="chart"></div>
         <p class="note" id="def-ev-note"></p>
-      </div>
-
-      <div class="card">
-        <h3 data-i18n="e.c9.t"></h3>
-        <div id="het-text" class="prose"></div>
-      </div>
-    </section>
-
-    <!-- NEW PLAYER -->
-    <section id="new" class="pane">
-      <div class="grid two wide-left">
-        <div class="card">
-          <h3 data-i18n="n.c1.t"></h3>
-          <p class="sub" data-i18n="n.c1.s"></p>
-          <div id="mix-sliders" class="mix"></div>
-          <div class="field">
-            <label for="skill-rng"><span data-i18n="n.skill"></span> <b id="skill-v">+0.0</b> pp</label>
-            <input type="range" id="skill-rng" min="-6" max="6" step="0.5" value="0">
-          </div>
-          <details class="own">
-            <summary data-i18n="n.own"></summary>
-            <div class="own-grid">
-              <label><span data-i18n="n.own.s1"></span> <span class="sv">2–6</span> <span data-i18n="n.own.s2"></span> <input type="number" id="own-ns" min="0" value="0"></label>
-              <label><span data-i18n="n.own.made"></span> <input type="number" id="own-ms" min="0" value="0"></label>
-              <label><span data-i18n="n.own.l1"></span> ≥ <span class="lv">8</span> <span data-i18n="n.own.s2"></span> <input type="number" id="own-nl" min="0" value="0"></label>
-              <label><span data-i18n="n.own.made"></span> <input type="number" id="own-ml" min="0" value="0"></label>
-            </div>
-          </details>
-        </div>
-        <div class="card">
-          <h3 data-i18n="n.c2.t"></h3>
-          <div id="proj-kpis" class="grid kpis small"></div>
-          <div id="chart-projection" class="chart"></div>
-          <p class="note" id="proj-note"></p>
-        </div>
       </div>
     </section>
 
@@ -290,6 +441,7 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/calc.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

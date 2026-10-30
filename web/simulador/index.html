@@ -180,7 +180,7 @@
 
     <!-- Camera tools, top right -->
     <div class="camera-tools">
-        <a class="btn-tool" href="../index.html"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg><span data-i18n="sim.back"></span></a>
+        <a class="btn-tool" id="back-analysis" href="../index.html"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg><span data-i18n="sim.back"></span></a>
         <button id="btn-camera" class="btn-tool" onclick="cycleCamera()"></button>
         <button id="btn-reset-stint" class="btn-tool" onclick="resetStint()"><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span data-i18n="sim.reset"></span></button>
         <div class="lang-sim" id="lang-switch" role="group" aria-label="Language">
@@ -318,6 +318,16 @@
 
     <!-- 3D logic (Three.js) -->
     <script>
+        // "Analysis" returns to the tab the reader came from (same tab and scroll), not to the start
+        (() => {
+            const back = document.getElementById("back-analysis");
+            let route = null, from = null;
+            try { route = sessionStorage.getItem("cf.route"); } catch (e) {}
+            if (route) back.href = "../index.html#" + route;
+            try { from = new URL(document.referrer); } catch (e) {}
+            if (!from || from.origin !== location.origin || !/\/(index\.html)?$/.test(from.pathname)) return;
+            back.addEventListener("click", (e) => { if (history.length > 1) { e.preventDefault(); history.back(); } });
+        })();
         // Players (colours, numbers and height are illustrative). Base accuracy is replaced on load
         // with the real season value (data/players.json); fatigue comes from the population model (data/summary.json).
         const PLAYERS_DATA = {
